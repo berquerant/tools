@@ -44,11 +44,11 @@ if __name__ == '__main__':
         description='jsonify result of query',
     )
 
-    p.add_argument('--u', action='store', type=str, required=True, help='user')
-    p.add_argument('--p', action='store', type=str, required=True, help='password')
-    p.add_argument('--h', action='store', type=str, required=True, help='host')
-    p.add_argument('--d', action='store', type=str, required=True, help='database')
-    p.add_argument('--q', action='store', type=str, required=True, help='query')
+    p.add_argument('-u', action='store', type=str, required=True, help='user')
+    p.add_argument('-p', action='store', type=str, required=True, help='password')
+    p.add_argument('-h', action='store', type=str, required=True, help='host')
+    p.add_argument('-d', action='store', type=str, required=True, help='database')
+    p.add_argument('-q', action='store', type=str, required=True, help='query')
 
     opt = p.parse_args()
     sql = MySQL(

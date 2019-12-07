@@ -65,8 +65,8 @@ if __name__ == '__main__':
 
     p.add_argument('--region_name', action='store', type=str, required=True, help='region')
     p.add_argument('--endpoint_url', action='store', default='', help='endpoint')
-    p.add_argument('--b', action='store', type=str, required=True, help='bucket')
-    p.add_argument('--p', action='store', type=str, required=True, help='prefix')
+    p.add_argument('-b', action='store', type=str, required=True, help='bucket')
+    p.add_argument('-p', action='store', type=str, required=True, help='prefix')
     p.add_argument('--dry', action='store_const', const=True, default=False, help='dry run')
 
     opt = p.parse_args()

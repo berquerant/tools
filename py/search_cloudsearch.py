@@ -45,9 +45,9 @@ if __name__ == '__main__':
 
     p.add_argument('--region_name', action='store', type=str, required=True, help='region')
     p.add_argument('--endpoint_url', action='store', default='', help='endpoint')
-    p.add_argument('--q', action='store', type=str, required=True, help='query')
-    p.add_argument('--p', action='store', type=str, required=True, help='query parser')
-    p.add_argument('--f', action='store', default='_all_fields', help='fields to include in response, comma separated list, see cloudsearchdomain')
+    p.add_argument('-q', action='store', type=str, required=True, help='query')
+    p.add_argument('-p', action='store', type=str, required=True, help='query parser')
+    p.add_argument('-f', action='store', default='_all_fields', help='fields to include in response, comma separated list, see cloudsearchdomain')
 
     opt = p.parse_args()
     cloudsearch = Cloudsearch(
