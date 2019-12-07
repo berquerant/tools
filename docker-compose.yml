@@ -1,0 +1,68 @@
+version: '3'
+
+services:
+  nginx:
+    container_name: nginx
+    image: docker.io/nginx:latest
+    ports:
+      - "8080:80"
+  neo4j:
+    container_name: neo4j
+    image: neo4j:latest
+    ports:
+      - "7473:7473"
+      - "7474:7474"
+      - "7687:7687"
+  aerospike:
+    container_name: aerospike
+    image: aerospike:latest
+    hostname: aerospike
+    ports:
+      - "3000:3000"
+  rabbitmq:
+    container_name: rabbitmq
+    image: rabbitmq:3-management
+    hostname: rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: user
+      RABBITMQ_DEFAULT_PASS: userpass
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+  s3:
+    container_name: s3
+    image: lphoward/fake-s3
+    ports:
+      - "4569:4569"
+  redis:
+    container_name: redis
+    image: redis:latest
+    ports:
+      - "6379:6379"
+  dynamodb:
+    container_name: dynamodb
+    image: dwmkerr/dynamodb
+    ports:
+      - "55588:8000"
+  # use --host 127.0.0.1 when you connect by mysql cli
+  mysql:
+    container_name: mysql
+    hostname: mysql
+    image: mysql:latest
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: db
+      MYSQL_USER: user
+      MYSQL_PASSWORD: pass
+    ports:
+      - "3306:3306"
+    command: mysqld --character-set-server=utf8 --collation-server=utf8_general_ci
+  hbase:
+    container_name: hbase
+    hostname: hbase
+    image: dajobe/hbase:latest
+    ports:
+      - "2181:2181"
+      - "9090:9090"
+      - "60000:60000"
+      - "60020:60020"
