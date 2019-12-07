@@ -1,6 +1,25 @@
 version: '3'
 
 services:
+  cloudsearch:
+    container_name: cloudsearch
+    image: oisinmulvihill/nozama-cloudsearch
+    ports:
+      - "15808:15808"
+    environment:
+      MONGO_HOST: mongo
+      ELASTICSEARCH_HOST: elasticsearch
+    depends_on:
+      - mongo
+      - elasticsearch
+  mongo:
+    container_name: mongo
+    image: mongo:3.4
+  elasticsearch:
+    container_name: elasticsearch
+    image: elasticsearch:7.1.0
+    environment:
+      - "discovery.type=single-node"
   nginx:
     container_name: nginx
     image: docker.io/nginx:latest
