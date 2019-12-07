@@ -1,3 +1,4 @@
 wheel
 setuptools
 mysql-connector-python
+boto3
