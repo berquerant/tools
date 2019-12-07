@@ -2,7 +2,7 @@ import pika
 import sys
 
 
-class Consumer:
+class Publisher:
     def __init__(self, username: str, password: str, host: str, port: int):
         self.host = host
         self.port = port
@@ -11,14 +11,14 @@ class Consumer:
             password=password,
         )
 
-    @staticmethod
-    def basic_consumer():
-        def inner(channel, method, header, body):
-            print('[{}] {}'.format(method.routing_key, body.decode('utf-8')), flush=True)
-            channel.basic_ack(delivery_tag=method.delivery_tag)
-        return inner
+    def basic_publish(self, exchange: str, routing_key: str):
+        self.publish(
+            exchange=exchange,
+            routing_key=routing_key,
+            bodies=(x.rstrip() for x in sys.stdin),
+        )
 
-    def consume(self, exchange: str, queue: str, callback: callable):
+    def publish(self, exchange: str, routing_key: str, bodies: iter):
         conn = pika.BlockingConnection(
             pika.ConnectionParameters(
                 host=self.host,
@@ -27,22 +27,16 @@ class Consumer:
             ),
         )
         ch = conn.channel()
-        ch.queue_declare(queue=queue, durable=True)
-        if exchange:
-            ch.queue_bind(
-                queue=queue,
-                exchange=exchange,
-                routing_key='#',
-            )
-
         try:
-            ch.basic_qos(prefetch_count=0)
-            ch.basic_consume(queue=queue, on_message_callback=callback)
-            ch.start_consuming()
+            for body in bodies:
+                ch.basic_publish(
+                    exchange=exchange,
+                    routing_key=routing_key,
+                    body=body,
+                )
         except Exception as e:
             print(e, file=sys.stderr)
         finally:
-            ch.stop_consuming()
             ch.close()
             conn.close()
 
@@ -51,26 +45,25 @@ if __name__ == '__main__':
     from argparse import ArgumentParser
 
     p = ArgumentParser(
-        description='rabbitmq consumer',
+        description='rabbitmq publisher',
     )
 
     p.add_argument('--port', action='store', default=5672, help='port')
     p.add_argument('--host', action='store', type=str, required=True, help='host')
-    p.add_argument('-q', action='store', type=str, required=True, help='queue')
+    p.add_argument('-k', action='store', type=str, required=True, help='routing key')
     p.add_argument('-x', action='store', default='', help='exchange')
     p.add_argument('-u', action='store', type=str, required=True, help='user')
     p.add_argument('-p', action='store', type=str, required=True, help='password')
 
     opt = p.parse_args()
 
-    consumer = Consumer(
+    publisher = Publisher(
         username=opt.u,
         password=opt.p,
         host=opt.host,
         port=opt.port,
     )
-    consumer.consume(
+    publisher.basic_publish(
         exchange=opt.x,
-        queue=opt.q,
-        callback=Consumer.basic_consumer(),
+        routing_key=opt.k,
     )
