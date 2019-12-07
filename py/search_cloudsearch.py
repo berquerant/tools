@@ -1,4 +1,6 @@
 import boto3
+import json
+from common.json import Encoder
 
 
 class Cloudsearch:
@@ -35,6 +37,10 @@ class Cloudsearch:
 
         yield from do()
 
+    def search_and_dump(self, query: str, parser: str, fields: str, size=1000):
+        for x in self.search(query=query, parser=parser, fields=fields, size=size):
+            print(json.dumps(x, cls=Encoder))
+
 
 if __name__ == '__main__':
     from argparse import ArgumentParser
@@ -54,5 +60,5 @@ if __name__ == '__main__':
         region_name=opt.region_name,
         endpoint_url=opt.endpoint_url,
     )
-    for x in cloudsearch.search(query=opt.q, parser=opt.p, fields=opt.f):
-        print(x)
+    cloudsearch.search_and_dump(query=opt.q, parser=opt.p, fields=opt.f):
+
