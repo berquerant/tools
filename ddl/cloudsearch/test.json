@@ -1,0 +1,2 @@
+{"type": "add", "id": "1", "fields": {"name": "alice", "email": "alice@example.com"}}
+{"type": "add", "id": "2", "fields": {"name": "bob", "email": "bob@example.com"}}

@@ -70,7 +70,7 @@ services:
     image: mysql:latest
     environment:
       MYSQL_ROOT_PASSWORD: rootpass
-      MYSQL_DATABASE: db
+      MYSQL_DATABASE: test
       MYSQL_USER: user
       MYSQL_PASSWORD: pass
     ports:

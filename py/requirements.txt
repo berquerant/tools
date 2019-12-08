@@ -3,3 +3,4 @@ setuptools
 mysql-connector-python
 boto3
 pika
+happybase

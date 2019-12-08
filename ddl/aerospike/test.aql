@@ -1,0 +1,5 @@
+drop index email_index
+create index email_index on test.people (email) string
+
+insert into test.people (PK, email, name) values (1, "alice@example.com", "alice")
+insert into test.people (PK, email, name) values (2, "bob@example.com", "bob")
