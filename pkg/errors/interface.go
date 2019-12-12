@@ -34,6 +34,11 @@ const (
 	Translate
 	// IO is io error
 	IO
+	// Validate is validate error
+	Validate
+	// Iterator is error by iterator
+	Iterator
+	Conversion
 )
 
 func NewError() Error {
