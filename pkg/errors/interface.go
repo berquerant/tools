@@ -38,6 +38,7 @@ const (
 	Validate
 	// Iterator is error by iterator
 	Iterator
+	// Conversion is type conversion error
 	Conversion
 )
 

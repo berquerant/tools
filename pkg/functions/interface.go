@@ -1,13 +1,10 @@
+/*
+Package functions provides utilities for functional programming
+*/
 package functions
 
 import (
-	"fmt"
-	"tools/pkg/errors"
 	"tools/pkg/functions/iterator"
-)
-
-var (
-	InvalidResult = errors.NewError().SetCode(errors.Validate).SetError(fmt.Errorf("invalid result"))
 )
 
 type (
@@ -28,7 +25,7 @@ type (
 		//
 		// initialValue :: b
 		Fold(aggregator, initialValue interface{}) Stream
-		// Consum consume stream
+		// Consume consume stream
 		//
 		// consumer :: a
 		Consume(consumer interface{}) error

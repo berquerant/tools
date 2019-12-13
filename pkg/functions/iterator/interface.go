@@ -1,3 +1,6 @@
+/*
+Package iterator provides iterator
+*/
 package iterator
 
 import (
@@ -19,7 +22,7 @@ type (
 		// Next returns next element
 		Next() (interface{}, error)
 	}
-
+	// Func is an iterator as a function
 	Func func() (interface{}, error)
 
 	errorIterator struct {
@@ -39,6 +42,8 @@ type (
 	}
 )
 
+// ToChan converts iterator into channel.
+// The channel is closed when iterator reached the end or some error
 func ToChan(iter Iterator) (<-chan *ItemAndError, errors.Error) {
 	ch := make(chan *ItemAndError)
 	go func() {
@@ -59,6 +64,7 @@ func ToChan(iter Iterator) (<-chan *ItemAndError, errors.Error) {
 	return ch, nil
 }
 
+// ToSlice convertes iterator into slice
 func ToSlice(iter Iterator) ([]interface{}, errors.Error) {
 	ret := []interface{}{}
 	for {
@@ -73,6 +79,7 @@ func ToSlice(iter Iterator) ([]interface{}, errors.Error) {
 	}
 }
 
+// ToFunc converts iterator into function
 func ToFunc(iter Iterator) (Func, errors.Error) {
 	return Func(iter.Next), nil
 }

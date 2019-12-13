@@ -1,3 +1,6 @@
+/*
+Package reflection provides reflection utilties
+*/
 package reflection
 
 import (
@@ -6,8 +9,7 @@ import (
 	"tools/pkg/errors"
 )
 
-// Convert converts valut into specified type.
-// v as t
+// Convert converts valut into specified type, v as t
 func Convert(v, t interface{}) (reflect.Value, errors.Error) {
 	return newConverter(v).convert(reflect.TypeOf(t))
 }
@@ -47,8 +49,9 @@ func (s *converter) convert(t reflect.Type) (ret reflect.Value, e errors.Error) 
 		return s.convertMap(t)
 	case reflect.Slice:
 		return s.convertSlice(t)
+	default:
+		return s.valueOf(), nil
 	}
-	return s.valueOf(), nil
 }
 
 func (s *converter) convertChan(t reflect.Type) (reflect.Value, errors.Error) {
