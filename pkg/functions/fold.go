@@ -21,7 +21,7 @@ type (
 		iv   interface{}
 	}
 
-	// FoldOptionFunc changes option of Folder
+	// FoldOptionFunc changes option of FoldExecutor
 	FoldOptionFunc func(*FoldExecutor)
 
 	// FoldType indicates type of fold
@@ -55,7 +55,7 @@ var (
 	}
 )
 
-func isValidFolder(ft FoldType, at AggregatorType) bool {
+func isValidFoldExecutor(ft FoldType, at AggregatorType) bool {
 	t, ok := validFolderMap[ft]
 	return ok && t(at)
 }
@@ -85,7 +85,7 @@ func NewFoldExecutor(f Aggregator, iter iterator.Iterator, options ...FoldOption
 	for _, opt := range options {
 		opt(folder)
 	}
-	if !isValidFolder(folder.ft, f.Type()) {
+	if !isValidFoldExecutor(folder.ft, f.Type()) {
 		return nil, InvalidFoldType
 	}
 	return folder, nil
