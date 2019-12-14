@@ -74,7 +74,7 @@ func WithInitialValue(v interface{}) FoldOptionFunc {
 	}
 }
 
-// NewFoldExector creates Folder with default fold type R and initial zero value
+// NewFoldExector creates FoldExecutor with default fold type R and initial zero value
 func NewFoldExecutor(f Aggregator, iter iterator.Iterator, options ...FoldOptionFunc) (*FoldExecutor, errors.Error) {
 	folder := &FoldExecutor{
 		agg:  f,
