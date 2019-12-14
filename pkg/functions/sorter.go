@@ -28,7 +28,8 @@ func IsSorter(f interface{}) bool {
 	t := reflect.TypeOf(f)
 	return t.Kind() == reflect.Func &&
 		t.NumIn() == 2 && t.NumOut() == 1 &&
-		t.In(0).String() == t.In(1).String()
+		t.In(0).String() == t.In(1).String() &&
+		t.Out(0).Kind() == reflect.Bool
 }
 
 func NewSorter(f interface{}) (Sorter, errors.Error) {
@@ -48,10 +49,10 @@ func (s *sorter) Apply(x, y interface{}) (bool, error) {
 	)
 	if err := func() error {
 		var err error
-		if vx, err = reflection.Convert(x, reflect.Zero(s.t.In(0))); err != nil {
+		if vx, err = reflection.ConvertShallow(x, s.t.In(0)); err != nil {
 			return err
 		}
-		vy, err = reflection.Convert(y, reflect.Zero(s.t.In(1)))
+		vy, err = reflection.ConvertShallow(y, s.t.In(1))
 		return err
 	}(); err != nil {
 		return false, errors.NewError().SetCode(errors.Conversion).SetError(fmt.Errorf("invalid argument for sorter: %v", err))

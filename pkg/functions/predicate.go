@@ -43,7 +43,7 @@ func NewPredicate(f interface{}) (Predicate, errors.Error) {
 }
 
 func (s *predicate) Apply(v interface{}) (bool, error) {
-	av, err := reflection.Convert(v, reflect.Zero(s.t.In(0)))
+	av, err := reflection.ConvertShallow(v, s.t.In(0))
 	if err != nil {
 		return false, errors.NewError().SetCode(errors.Conversion).SetError(fmt.Errorf("invalid argument for predicate: %v", err))
 	}

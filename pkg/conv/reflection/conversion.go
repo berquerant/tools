@@ -9,19 +9,41 @@ import (
 	"tools/pkg/errors"
 )
 
-// Convert converts valut into specified type, v as t
-func Convert(v, t interface{}) (reflect.Value, errors.Error) {
-	return newConverter(v).convert(reflect.TypeOf(t))
+var (
+	shallowDefaultConverter = func(val reflect.Value, _ reflect.Type) reflect.Value {
+		return val
+	}
+	defaultConverter = func(val reflect.Value, typ reflect.Type) reflect.Value {
+		return val.Convert(typ)
+	}
+)
+
+// ConvertShallow converts value into specified type but deepest elements are not conversion target
+func ConvertShallow(v interface{}, t reflect.Type) (reflect.Value, errors.Error) {
+	return newConverter(v, shallowDefaultConverter).convert(t)
+}
+
+// Convert converts value into specified type, v as t
+func Convert(v interface{}, t reflect.Type) (reflect.Value, errors.Error) {
+	return newConverter(v, defaultConverter).convert(t)
 }
 
 type (
 	converter struct {
-		v interface{}
+		v                interface{}
+		defaultConverter func(reflect.Value, reflect.Type) reflect.Value
 	}
 )
 
-func newConverter(v interface{}) *converter {
-	return &converter{v: v}
+func newConverter(v interface{}, defaultConverter func(reflect.Value, reflect.Type) reflect.Value) *converter {
+	return &converter{
+		v:                v,
+		defaultConverter: defaultConverter,
+	}
+}
+
+func (s *converter) newConverter(v interface{}) *converter {
+	return newConverter(v, s.defaultConverter)
 }
 
 func (s *converter) valueOf() reflect.Value {
@@ -50,6 +72,9 @@ func (s *converter) convert(t reflect.Type) (ret reflect.Value, e errors.Error) 
 	case reflect.Slice:
 		return s.convertSlice(t)
 	default:
+		if s.defaultConverter != nil {
+			return s.defaultConverter(s.valueOf(), t), nil
+		}
 		return s.valueOf(), nil
 	}
 }
@@ -63,7 +88,7 @@ func (s *converter) convertArray(t reflect.Type) (reflect.Value, errors.Error) {
 	arrayPtr := reflect.New(t)
 	for i := 0; i < arrayPtr.Len(); i++ {
 		x := sv.Index(i)
-		y, err := newConverter(x.Interface()).convert(t.Elem())
+		y, err := s.newConverter(x.Interface()).convert(t.Elem())
 		if err != nil {
 			return reflect.Zero(t), err
 		}
@@ -77,7 +102,7 @@ func (s *converter) convertSlice(t reflect.Type) (reflect.Value, errors.Error) {
 	slicePtr := reflect.MakeSlice(t, sv.Len(), sv.Len())
 	for i := 0; i < sv.Len(); i++ {
 		x := sv.Index(i)
-		y, err := newConverter(x.Interface()).convert(t.Elem())
+		y, err := s.newConverter(x.Interface()).convert(t.Elem())
 		if err != nil {
 			return reflect.Zero(t), err
 		}
@@ -92,8 +117,8 @@ func (s *converter) convertMap(t reflect.Type) (reflect.Value, errors.Error) {
 	mapIter := sv.MapRange()
 	for mapIter.Next() {
 		k, v := mapIter.Key(), mapIter.Value()
-		ck, keyErr := newConverter(k.Interface()).convert(t.Key())
-		cv, valueErr := newConverter(v.Interface()).convert(t.Elem())
+		ck, keyErr := s.newConverter(k.Interface()).convert(t.Key())
+		cv, valueErr := s.newConverter(v.Interface()).convert(t.Elem())
 		if keyErr != nil {
 			return reflect.Zero(t), keyErr
 		}

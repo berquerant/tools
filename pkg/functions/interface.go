@@ -4,6 +4,9 @@ Package functions provides utilities for functional programming
 package functions
 
 import (
+	"reflect"
+	"sort"
+	"tools/pkg/conv/reflection"
 	"tools/pkg/functions/iterator"
 )
 
@@ -29,6 +32,12 @@ type (
 		//
 		// consumer :: a
 		Consume(consumer interface{}) error
+		// As assign stream into reference v
+		As(v interface{}) error
+		// Sort sort stream
+		//
+		// less :: a -> a -> bool
+		Sort(less interface{}) Stream
 	}
 
 	stream struct {
@@ -137,4 +146,40 @@ func (s *stream) Consume(consumer interface{}) error {
 			return err
 		}
 	}
+}
+
+func (s *stream) As(v interface{}) error {
+	slice, err := iterator.ToSlice(s)
+	if err != nil {
+		return err
+	}
+	sv, err := reflection.Convert(slice, reflect.TypeOf(v).Elem())
+	if err != nil {
+		return err
+	}
+	reflect.ValueOf(v).Elem().Set(sv)
+	return nil
+}
+
+func (s *stream) Sort(less interface{}) Stream {
+	var err error
+	f, err := NewSorter(less)
+	if err != nil {
+		panic(err)
+	}
+	slice, err := iterator.ToSlice(s)
+	if err != nil {
+		panic(err)
+	}
+	if len(slice) == 0 {
+		return NewStream(iterator.MustNew(nil))
+	}
+	sort.SliceStable(slice, func(i, j int) bool {
+		ret, err := f.Apply(slice[i], slice[j])
+		if err != nil {
+			panic(err)
+		}
+		return ret
+	})
+	return NewStream(iterator.MustNew(slice))
 }

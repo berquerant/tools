@@ -111,6 +111,8 @@ func (s *funcTuple) apply(st functions.Stream) (ret functions.Stream, e error) {
 		return st.Filter(s.F), nil
 	case ftAggregator:
 		return st.Fold(s.F, s.IV), nil
+	case ftSorter:
+		return st.Sort(s.F), nil
 	default:
 		return nil, errNotSupportedFuncType
 	}
@@ -227,6 +229,43 @@ func TestStream(t *testing.T) {
 					}
 				}
 				return r
+			}(),
+		},
+		&streamTestcase{
+			Comment: "sort-no-content",
+			Data:    nil,
+			Translators: newFuncTuplesBuilder().
+				Append(func(x, y int) bool {
+					return x < y
+				}).Build(),
+			Result: []interface{}{},
+		},
+		&streamTestcase{
+			Comment: "sort-int",
+			Data:    []int{5, 4, 9, 2},
+			Translators: newFuncTuplesBuilder().
+				Append(func(x, y int) bool {
+					return x < y
+				}).Build(),
+			Result: []interface{}{2, 4, 5, 9},
+		},
+		&streamTestcase{
+			Comment: "sort-people",
+			Data:    people(),
+			Translators: newFuncTuplesBuilder().
+				Append(func(x, y Person) bool {
+					return fmt.Sprintf("%s-%s", x.Name, x.Surname) < fmt.Sprintf("%s-%s", y.Name, y.Surname)
+				}).Build(),
+			Result: func() []interface{} {
+				ps := people()
+				sort.SliceStable(ps, func(i, j int) bool {
+					return fmt.Sprintf("%s-%s", ps[i].Name, ps[i].Surname) < fmt.Sprintf("%s-%s", ps[j].Name, ps[j].Surname)
+				})
+				ret := make([]interface{}, len(ps))
+				for i, p := range ps {
+					ret[i] = p
+				}
+				return ret
 			}(),
 		},
 		&streamTestcase{
@@ -349,5 +388,140 @@ func TestStream(t *testing.T) {
 		t.Run(tt.Comment, func(t *testing.T) {
 			tt.Test(t)
 		})
+	}
+}
+
+type (
+	streamConsumeTestcase struct {
+		Comment string
+		Data    []interface{}
+	}
+)
+
+func (s *streamConsumeTestcase) Test(t *testing.T) {
+	var i int
+	if err := functions.NewStream(iterator.MustNew(s.Data)).Consume(func(x interface{}) {
+		if !cmp.Equal(x, s.Data[i]) {
+			t.Errorf("not equal\n  actual: %#v\nexpected: %#v", x, s.Data[i])
+		}
+		i++
+	}); err != nil {
+		t.Error(err)
+	}
+}
+
+func TestStreamConsume(t *testing.T) {
+	testcases := []*streamConsumeTestcase{
+		&streamConsumeTestcase{
+			Comment: "no-content",
+			Data:    nil,
+		},
+		&streamConsumeTestcase{
+			Comment: "int-1",
+			Data:    []interface{}{1},
+		},
+		&streamConsumeTestcase{
+			Comment: "int2-2",
+			Data:    []interface{}{[]int{1}, []int{2}},
+		},
+		&streamConsumeTestcase{
+			Comment: "string-3",
+			Data:    []interface{}{"1", "2", "3"},
+		},
+		&streamConsumeTestcase{
+			Comment: "people",
+			Data: func() []interface{} {
+				r := make([]interface{}, len(people()))
+				for i, p := range people() {
+					r[i] = p
+				}
+				return r
+			}(),
+		},
+	}
+
+	for _, tt := range testcases {
+		t.Run(tt.Comment, func(t *testing.T) {
+			tt.Test(t)
+		})
+	}
+}
+
+func TestStreamAs(t *testing.T) {
+	convert := func(d interface{}) functions.Stream {
+		return functions.NewStream(iterator.MustNew(d))
+	}
+
+	testcases := []struct {
+		Comment string
+		Test    func(*testing.T)
+	}{
+		{
+			Comment: "no-content",
+			Test: func(t *testing.T) {
+				var (
+					d = []int{}
+					r []int
+				)
+				if err := convert(d).As(&r); err != nil {
+					t.Error(err)
+				}
+				if len(r) != 0 {
+					t.Errorf("got %#v", r)
+				}
+			},
+		},
+		{
+			Comment: "int-1",
+			Test: func(t *testing.T) {
+				var (
+					d = []int{1}
+					r []int
+				)
+				if err := convert(d).As(&r); err != nil {
+					t.Error(err)
+				}
+				if !cmp.Equal(r, d) {
+					t.Errorf("got %#v", r)
+				}
+			},
+		},
+		{
+			Comment: "string2-2",
+			Test: func(t *testing.T) {
+				var (
+					d = [][]string{
+						[]string{"1"},
+						[]string{"2", "3"},
+					}
+					r [][]string
+				)
+				if err := convert(d).As(&r); err != nil {
+					t.Error(err)
+				}
+				if !cmp.Equal(r, d) {
+					t.Errorf("got %#v", r)
+				}
+			},
+		},
+		{
+			Comment: "people",
+			Test: func(t *testing.T) {
+				var (
+					d = people()
+					r []Person
+				)
+				if err := convert(d).As(&r); err != nil {
+					t.Error(err)
+				}
+				if !cmp.Equal(r, d) {
+					t.Errorf("got %#v", r)
+				}
+			},
+		},
+	}
+
+	for _, tt := range testcases {
+		t.Run(tt.Comment, tt.Test)
 	}
 }

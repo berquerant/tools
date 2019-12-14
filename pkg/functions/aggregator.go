@@ -48,10 +48,10 @@ func (s *aggregator) Apply(x, acc interface{}) (interface{}, error) {
 	)
 	if err := func() error {
 		var err error
-		if vx, err = reflection.Convert(x, reflect.Zero(s.t.In(0))); err != nil {
+		if vx, err = reflection.ConvertShallow(x, s.t.In(0)); err != nil {
 			return err
 		}
-		vacc, err = reflection.Convert(acc, reflect.Zero(s.t.In(1)))
+		vacc, err = reflection.ConvertShallow(acc, s.t.In(1))
 		return err
 	}(); err != nil {
 		return nil, errors.NewError().SetCode(errors.Conversion).SetError(fmt.Errorf("invalid argument for aggregate: %v", err))

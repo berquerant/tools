@@ -42,7 +42,7 @@ func NewMapper(f interface{}) (Mapper, errors.Error) {
 }
 
 func (s *mapper) Apply(v interface{}) (interface{}, error) {
-	av, err := reflection.Convert(v, reflect.Zero(s.t.In(0)))
+	av, err := reflection.ConvertShallow(v, s.t.In(0))
 	if err != nil {
 		return nil, errors.NewError().SetCode(errors.Conversion).SetError(fmt.Errorf("invalid argument for mapper: %v", err))
 	}

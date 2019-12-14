@@ -11,7 +11,7 @@ type (
 	kv struct {
 		k, v interface{}
 	}
-	// IE is a cell to contain element sent from  the channel that made from iterator
+	// IE is a cell to contain element sent from the channel that made from iterator
 	IE interface {
 		I() interface{}
 		E() error
