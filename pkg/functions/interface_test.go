@@ -433,6 +433,59 @@ func TestStream(t *testing.T) {
 				return []interface{}{ret}
 			}(),
 		},
+		&streamTestcase{
+			Comment: "mix2",
+			Data:    people(),
+			Translators: newFuncTuplesBuilder().
+				Append(func(p Person) string {
+					return strings.ToUpper(p.Region)
+				}).AppendWith(func(x string, d map[string]int) map[string]int {
+				d[x]++
+				return d
+			}, map[string]int{},
+			).AppendType(
+				ftFlat,
+			).Append(func(x iterator.KV) bool {
+				return x.V().(int) > 1
+			}).Append(func(x, y iterator.KV) bool {
+				return x.K().(string) < y.K().(string)
+			}).Append(func(x, y iterator.KV) bool {
+				return x.V().(int) < y.V().(int)
+			}).Append(func(x iterator.KV) string {
+				return fmt.Sprintf("%v:%v", x.K(), x.V())
+			}).Build(),
+			Result: func() []interface{} {
+				d := map[string]int{}
+				for _, p := range people() {
+					d[strings.ToUpper(p.Region)]++
+				}
+				type Cell struct {
+					Region string
+					N      int
+				}
+				cells := []*Cell{}
+				for k, v := range d {
+					if v <= 1 {
+						continue
+					}
+					cells = append(cells, &Cell{
+						Region: k,
+						N:      v,
+					})
+				}
+				sort.SliceStable(cells, func(i, j int) bool {
+					return cells[i].Region < cells[j].Region
+				})
+				sort.SliceStable(cells, func(i, j int) bool {
+					return cells[i].N < cells[j].N
+				})
+				r := make([]interface{}, len(cells))
+				for i, c := range cells {
+					r[i] = fmt.Sprintf("%s:%d", c.Region, c.N)
+				}
+				return r
+			}(),
+		},
 	}
 
 	for _, tt := range testcases {
