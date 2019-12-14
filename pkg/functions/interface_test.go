@@ -60,6 +60,7 @@ const (
 	ftAggregator
 	ftConsumer
 	ftSorter
+	ftFlat // dummy
 )
 
 var (
@@ -113,6 +114,8 @@ func (s *funcTuple) apply(st functions.Stream) (ret functions.Stream, e error) {
 		return st.Fold(s.F, s.IV), nil
 	case ftSorter:
 		return st.Sort(s.F), nil
+	case ftFlat:
+		return st.Flat(), nil
 	default:
 		return nil, errNotSupportedFuncType
 	}
@@ -147,6 +150,13 @@ func (s *funcTuplesBuilder) AppendWith(f, iv interface{}) *funcTuplesBuilder {
 	return s
 }
 
+func (s *funcTuplesBuilder) AppendType(ft funcType) *funcTuplesBuilder {
+	s.v = append(s.v, &funcTuple{
+		T: ft,
+	})
+	return s
+}
+
 func (s *funcTuplesBuilder) Build() []*funcTuple {
 	return s.v
 }
@@ -156,7 +166,7 @@ func (s *streamTestcase) Test(t *testing.T) {
 	for i, ft := range s.Translators {
 		ret, err := ft.apply(st)
 		if err != nil {
-			t.Errorf("%d th translator returns error: %v", i, err)
+			t.Errorf("%d th translator returns error: %v", i+1, err)
 			return
 		}
 		st = ret
@@ -230,6 +240,47 @@ func TestStream(t *testing.T) {
 				}
 				return r
 			}(),
+		},
+		&streamTestcase{
+			Comment: "flat-no-content",
+			Data:    nil,
+			Translators: newFuncTuplesBuilder().
+				AppendType(ftFlat).Build(),
+			Result: []interface{}{},
+		},
+		&streamTestcase{
+			Comment: "flat-ints-1",
+			Data: [][]int{
+				[]int{1},
+			},
+			Translators: newFuncTuplesBuilder().
+				AppendType(ftFlat).Build(),
+			Result: []interface{}{1},
+		},
+		&streamTestcase{
+			Comment: "flat-strings",
+			Data: [][]string{
+				[]string{"f", "l", "a", "t"},
+				[]string{"str", "ring", "s"},
+			},
+			Translators: newFuncTuplesBuilder().
+				AppendType(ftFlat).Build(),
+			Result: []interface{}{"f", "l", "a", "t", "str", "ring", "s"},
+		},
+		&streamTestcase{
+			Comment: "flat-deep",
+			Data: [][][]int{
+				[][]int{
+					[]int{1},
+					[]int{2, 3},
+				},
+				[][]int{
+					[]int{123},
+				},
+			},
+			Translators: newFuncTuplesBuilder().
+				AppendType(ftFlat).Build(),
+			Result: []interface{}{[]int{1}, []int{2, 3}, []int{123}},
 		},
 		&streamTestcase{
 			Comment: "sort-no-content",

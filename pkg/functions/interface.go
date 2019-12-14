@@ -38,6 +38,8 @@ type (
 		//
 		// less :: a -> a -> bool
 		Sort(less interface{}) Stream
+		// Flat flatten stream
+		Flat() Stream
 	}
 
 	stream struct {
@@ -97,6 +99,7 @@ func (s *stream) Filter(predicate interface{}) Stream {
 }
 
 func (s *stream) Fold(aggregator, initialValue interface{}) Stream {
+	var err error
 	f, err := NewAggregator(aggregator)
 	if err != nil {
 		panic(err)
@@ -118,14 +121,11 @@ func (s *stream) Fold(aggregator, initialValue interface{}) Stream {
 		return f.Apply(x, ret)
 	}
 
-	iter := func() iterator.Iterator {
-		ret, err := foldr(f, initialValue, s)
-		if err != nil {
-			return iterator.MustNew(err)
-		}
-		return iterator.MustNewFromInterfaces(ret)
-	}()
-	return NewStream(iter)
+	ret, err := foldr(f, initialValue, s)
+	if err != nil {
+		panic(err)
+	}
+	return NewStream(iterator.MustNewFromInterfaces(ret))
 }
 
 func (s *stream) Consume(consumer interface{}) error {
@@ -182,4 +182,32 @@ func (s *stream) Sort(less interface{}) Stream {
 		return ret
 	})
 	return NewStream(iterator.MustNew(slice))
+}
+
+func (s *stream) Flat() Stream {
+	var (
+		top   iterator.Iterator
+		iFunc func() (interface{}, error)
+	)
+	iFunc = func() (interface{}, error) {
+		if top == nil {
+			elem, err := s.Next()
+			if err != nil {
+				return nil, err
+			}
+			top = iterator.MustNew(elem)
+		}
+
+		x, err := top.Next()
+		if err == iterator.EOI {
+			top = nil
+			return iFunc()
+		}
+		if err != nil {
+			return nil, err
+		}
+		return x, nil
+	}
+
+	return NewStream(iterator.MustNew(iterator.Func(iFunc)))
 }
