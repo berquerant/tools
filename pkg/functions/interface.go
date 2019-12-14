@@ -101,7 +101,7 @@ func (s *stream) Fold(aggregator interface{}, options ...FoldOptionFunc) Stream 
 	if err != nil {
 		panic(fmt.Sprintf("invalid function for Fold: %v", err))
 	}
-	folder, err := NewFolder(f, s, options...)
+	folder, err := NewFoldExecutor(f, s, options...)
 	if err != nil {
 		panic(fmt.Sprintf("cannot create folder for Fold: %v", err))
 	}

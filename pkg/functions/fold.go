@@ -13,8 +13,8 @@ var (
 type (
 	FoldFunc func(f Aggregator, acc interface{}, iter iterator.Iterator) (interface{}, error)
 
-	// Folder is fold executor
-	Folder struct {
+	// FoldExecutor is fold executor
+	FoldExecutor struct {
 		agg  Aggregator
 		iter iterator.Iterator
 		ft   FoldType
@@ -22,7 +22,7 @@ type (
 	}
 
 	// FoldOptionFunc changes option of Folder
-	FoldOptionFunc func(*Folder)
+	FoldOptionFunc func(*FoldExecutor)
 
 	// FoldType indicates type of fold
 	FoldType int
@@ -62,21 +62,21 @@ func isValidFolder(ft FoldType, at AggregatorType) bool {
 
 // WithFoldType specifies fold function type
 func WithFoldType(ft FoldType) FoldOptionFunc {
-	return func(s *Folder) {
+	return func(s *FoldExecutor) {
 		s.ft = ft
 	}
 }
 
 // WithInitialValue specifies fold initial value
 func WithInitialValue(v interface{}) FoldOptionFunc {
-	return func(s *Folder) {
+	return func(s *FoldExecutor) {
 		s.iv = v
 	}
 }
 
-// NewFolder creates Folder with default fold type R and initial zero value
-func NewFolder(f Aggregator, iter iterator.Iterator, options ...FoldOptionFunc) (*Folder, errors.Error) {
-	folder := &Folder{
+// NewFoldExector creates Folder with default fold type R and initial zero value
+func NewFoldExecutor(f Aggregator, iter iterator.Iterator, options ...FoldOptionFunc) (*FoldExecutor, errors.Error) {
+	folder := &FoldExecutor{
 		agg:  f,
 		iter: iter,
 		ft:   FoldTypeR,
@@ -91,7 +91,7 @@ func NewFolder(f Aggregator, iter iterator.Iterator, options ...FoldOptionFunc) 
 	return folder, nil
 }
 
-func (s *Folder) Fold() (interface{}, error) {
+func (s *FoldExecutor) Fold() (interface{}, error) {
 	if f, ok := foldFuncMap[s.ft]; ok {
 		return f(s.agg, s.iv, s.iter)
 	}
