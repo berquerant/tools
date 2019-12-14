@@ -36,7 +36,7 @@ type (
 func MustNew(v interface{}) Iterator {
 	iter, err := New(v)
 	if err != nil {
-		panic(err)
+		panic(fmt.Sprintf("cannot create iterator: %v", err))
 	}
 	return iter
 }
@@ -44,7 +44,7 @@ func MustNew(v interface{}) Iterator {
 func MustNewFromInterfaces(vs ...interface{}) Iterator {
 	iter, err := NewFromInterfaces(vs...)
 	if err != nil {
-		panic(err)
+		panic(fmt.Sprintf("cannot create iterator: %v", err))
 	}
 	return iter
 }
@@ -174,8 +174,8 @@ func newIteratorFromMap(v interface{}) (Iterator, errors.Error) {
 	return newIteratorFromFunc(Func(func() (interface{}, error) {
 		if iter.Next() {
 			return &kv{
-				k: iter.Key(),
-				v: iter.Value(),
+				k: iter.Key().Interface(),
+				v: iter.Value().Interface(),
 			}, nil
 		}
 		return nil, EOI
