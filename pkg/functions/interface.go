@@ -24,11 +24,7 @@ type (
 		// predicate :: a -> bool
 		Filter(predicate interface{}) Stream
 		// Fold aggregate elements
-		//
-		// aggregator :: a -> b -> b
-		//
-		// initialValue :: b
-		Fold(aggregator, initialValue interface{}) Stream
+		Fold(aggregator interface{}, options ...FoldOptionFunc) Stream
 		// Consume consume stream
 		//
 		// consumer :: a
@@ -99,30 +95,18 @@ func (s *stream) Filter(predicate interface{}) Stream {
 	return NewStream(iterator.MustNew(iterator.Func(iFunc)))
 }
 
-func (s *stream) Fold(aggregator, initialValue interface{}) Stream {
+func (s *stream) Fold(aggregator interface{}, options ...FoldOptionFunc) Stream {
 	var err error
 	f, err := NewAggregator(aggregator)
 	if err != nil {
 		panic(fmt.Sprintf("invalid function for Fold: %v", err))
 	}
-
-	var foldr func(f Aggregator, acc interface{}, iter iterator.Iterator) (interface{}, error)
-	foldr = func(f Aggregator, acc interface{}, iter iterator.Iterator) (interface{}, error) {
-		x, err := iter.Next()
-		if err == iterator.EOI {
-			return acc, nil
-		}
-		if err != nil {
-			return nil, err
-		}
-		ret, err := foldr(f, acc, iter)
-		if err != nil {
-			return nil, err
-		}
-		return f.Apply(x, ret)
+	folder, err := NewFolder(f, s, options...)
+	if err != nil {
+		panic(fmt.Sprintf("cannot create folder for Fold: %v", err))
 	}
 
-	ret, err := foldr(f, initialValue, s)
+	ret, err := folder.Fold()
 	if err != nil {
 		panic(fmt.Sprintf("cannot fold for Fold: %v", err))
 	}

@@ -3,14 +3,6 @@ package iterator
 import "tools/pkg/errors"
 
 type (
-	// KV is a cell to contain element from iterator made from map
-	KV interface {
-		K() interface{}
-		V() interface{}
-	}
-	kv struct {
-		k, v interface{}
-	}
 	// IE is a cell to contain element sent from the channel that made from iterator
 	IE interface {
 		I() interface{}
@@ -21,9 +13,6 @@ type (
 		e error
 	}
 )
-
-func (s *kv) K() interface{} { return s.k }
-func (s *kv) V() interface{} { return s.v }
 
 func (s *ie) I() interface{} { return s.i }
 func (s *ie) E() error       { return s.e }

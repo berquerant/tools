@@ -24,13 +24,6 @@ type (
 	}
 	// Func is an iterator as a function
 	Func func() (interface{}, error)
-
-	errorIterator struct {
-		e error
-	}
-	funcIterator struct {
-		f Func
-	}
 )
 
 func MustNew(v interface{}) Iterator {
@@ -70,31 +63,58 @@ func New(v interface{}) (Iterator, errors.Error) {
 		return newIteratorFromChan(v)
 	case reflect.Map:
 		return newIteratorFromMap(v)
+	default:
+		return newSingleValueIterator(v)
 	}
-	return nil, invalidArgument
 }
 
 func NewFromInterfaces(vs ...interface{}) (Iterator, errors.Error) {
 	return newIteratorFromSlice(vs)
 }
 
+func newSingleValueIterator(v interface{}) (Iterator, errors.Error) {
+	if v == nil {
+		return nil, invalidArgument
+	}
+	var isYielded bool
+	return newIteratorFromFunc(func() (interface{}, error) {
+		if isYielded {
+			return nil, EOI
+		}
+		return v, nil
+	})
+}
+
 func newErrorIterator(err error) (Iterator, errors.Error) {
 	if err == nil {
 		return nil, invalidArgument
 	}
-	return &errorIterator{e: err}, nil
-}
-
-func (s *errorIterator) Next() (interface{}, error) {
-	return nil, s.e
+	return newIteratorFromFunc(func() (interface{}, error) {
+		return nil, err
+	})
 }
 
 func newNilIterator() (Iterator, errors.Error) {
-	return &errorIterator{e: EOI}, nil
+	return newErrorIterator(EOI)
 }
 
+type (
+	funcIterator struct {
+		f     Func
+		isEOI bool
+	}
+)
+
 func (s *funcIterator) Next() (interface{}, error) {
-	return s.f()
+	if s.isEOI {
+		return nil, EOI
+	}
+	x, err := s.f()
+	if err != nil {
+		s.isEOI = true
+		return nil, err
+	}
+	return x, nil
 }
 
 func newIteratorFromFunc(f Func) (Iterator, errors.Error) {
@@ -161,6 +181,20 @@ func newIteratorFromChan(v interface{}) (Iterator, errors.Error) {
 		return nil, EOI
 	}))
 }
+
+type (
+	// KV is a cell to contain element from iterator made from map
+	KV interface {
+		K() interface{}
+		V() interface{}
+	}
+	kv struct {
+		k, v interface{}
+	}
+)
+
+func (s *kv) K() interface{} { return s.k }
+func (s *kv) V() interface{} { return s.v }
 
 func newIteratorFromMap(v interface{}) (Iterator, errors.Error) {
 	if v == nil {

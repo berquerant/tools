@@ -40,6 +40,8 @@ const (
 	Iterator
 	// Conversion is type conversion error
 	Conversion
+	// Fold is fold error
+	Fold
 )
 
 func NewError() Error {

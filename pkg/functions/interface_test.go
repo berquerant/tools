@@ -111,7 +111,7 @@ func (s *funcTuple) apply(st functions.Stream) (ret functions.Stream, e error) {
 	case ftPredicate:
 		return st.Filter(s.F), nil
 	case ftAggregator:
-		return st.Fold(s.F, s.IV), nil
+		return st.Fold(s.F, functions.WithInitialValue(s.IV)), nil
 	case ftSorter:
 		return st.Sort(s.F), nil
 	case ftFlat:
