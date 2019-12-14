@@ -33,19 +33,34 @@ type (
 	}
 
 	// KV is a cell to contain element from iterator made from map
-	KV struct {
-		K, V interface{}
+	KV interface {
+		K() interface{}
+		V() interface{}
 	}
-	ItemAndError struct {
-		Item interface{}
-		Err  error
+	kv struct {
+		k, v interface{}
+	}
+	// IE is a cell to contain element sent from  the channel that made from iterator
+	IE interface {
+		I() interface{}
+		E() error
+	}
+	ie struct {
+		i interface{}
+		e error
 	}
 )
 
+func (s *kv) K() interface{} { return s.k }
+func (s *kv) V() interface{} { return s.v }
+
+func (s *ie) I() interface{} { return s.i }
+func (s *ie) E() error       { return s.e }
+
 // ToChan converts iterator into channel.
 // The channel is closed when iterator reached the end or some error
-func ToChan(iter Iterator) (<-chan *ItemAndError, errors.Error) {
-	ch := make(chan *ItemAndError)
+func ToChan(iter Iterator) (<-chan IE, errors.Error) {
+	ch := make(chan IE)
 	go func() {
 		for {
 			x, err := iter.Next()
@@ -54,11 +69,11 @@ func ToChan(iter Iterator) (<-chan *ItemAndError, errors.Error) {
 				return
 			}
 			if err != nil {
-				ch <- &ItemAndError{Err: err}
+				ch <- &ie{e: err}
 				close(ch)
 				return
 			}
-			ch <- &ItemAndError{Item: x}
+			ch <- &ie{i: x}
 		}
 	}()
 	return ch, nil
@@ -224,9 +239,9 @@ func newIteratorFromMap(v interface{}) (Iterator, errors.Error) {
 	iter := reflect.ValueOf(v).MapRange()
 	return newIteratorFromFunc(Func(func() (interface{}, error) {
 		if iter.Next() {
-			return &KV{
-				K: iter.Key(),
-				V: iter.Value(),
+			return &kv{
+				k: iter.Key(),
+				v: iter.Value(),
 			}, nil
 		}
 		return nil, EOI
