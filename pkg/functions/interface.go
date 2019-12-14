@@ -4,6 +4,7 @@ Package functions provides utilities for functional programming
 package functions
 
 import (
+	"fmt"
 	"reflect"
 	"sort"
 	"tools/pkg/conv/reflection"
@@ -58,7 +59,7 @@ func (s *stream) Next() (interface{}, error) {
 func (s *stream) Map(mapper interface{}) Stream {
 	f, err := NewMapper(mapper)
 	if err != nil {
-		panic(err)
+		panic(fmt.Sprintf("invalid function for Map: %v", err))
 	}
 
 	return NewStream(iterator.MustNew(iterator.Func(func() (interface{}, error) {
@@ -77,7 +78,7 @@ func (s *stream) Map(mapper interface{}) Stream {
 func (s *stream) Filter(predicate interface{}) Stream {
 	f, err := NewPredicate(predicate)
 	if err != nil {
-		panic(err)
+		panic(fmt.Sprintf("invalid function for Filter: %v", err))
 	}
 
 	var iFunc func() (interface{}, error)
@@ -102,7 +103,7 @@ func (s *stream) Fold(aggregator, initialValue interface{}) Stream {
 	var err error
 	f, err := NewAggregator(aggregator)
 	if err != nil {
-		panic(err)
+		panic(fmt.Sprintf("invalid function for Fold: %v", err))
 	}
 
 	var foldr func(f Aggregator, acc interface{}, iter iterator.Iterator) (interface{}, error)
@@ -123,7 +124,7 @@ func (s *stream) Fold(aggregator, initialValue interface{}) Stream {
 
 	ret, err := foldr(f, initialValue, s)
 	if err != nil {
-		panic(err)
+		panic(fmt.Sprintf("cannot fold for Fold: %v", err))
 	}
 	return NewStream(iterator.MustNewFromInterfaces(ret))
 }
@@ -131,7 +132,7 @@ func (s *stream) Fold(aggregator, initialValue interface{}) Stream {
 func (s *stream) Consume(consumer interface{}) error {
 	f, err := NewConsumer(consumer)
 	if err != nil {
-		panic(err)
+		panic(fmt.Sprintf("invalid function for Consume: %v", err))
 	}
 
 	for {
@@ -165,11 +166,11 @@ func (s *stream) Sort(less interface{}) Stream {
 	var err error
 	f, err := NewSorter(less)
 	if err != nil {
-		panic(err)
+		panic(fmt.Sprintf("invalid function for Sort: %v", err))
 	}
 	slice, err := iterator.ToSlice(s)
 	if err != nil {
-		panic(err)
+		panic(fmt.Sprintf("cannot get slice for Sort: %v", err))
 	}
 	if len(slice) == 0 {
 		return NewStream(iterator.MustNew(nil))
@@ -177,7 +178,7 @@ func (s *stream) Sort(less interface{}) Stream {
 	sort.SliceStable(slice, func(i, j int) bool {
 		ret, err := f.Apply(slice[i], slice[j])
 		if err != nil {
-			panic(err)
+			panic(fmt.Sprintf("cannot compare for Sort: %v", err))
 		}
 		return ret
 	})
