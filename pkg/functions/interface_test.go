@@ -61,6 +61,7 @@ const (
 	ftConsumer
 	ftSorter
 	ftFlat // dummy
+	ftLift // dummy
 )
 
 var (
@@ -116,6 +117,8 @@ func (s *funcTuple) apply(st functions.Stream) (ret functions.Stream, e error) {
 		return st.Sort(s.F), nil
 	case ftFlat:
 		return st.Flat(), nil
+	case ftLift:
+		return st.Lift(), nil
 	default:
 		return nil, errNotSupportedFuncType
 	}
@@ -242,6 +245,43 @@ func TestStream(t *testing.T) {
 			}(),
 		},
 		&streamTestcase{
+			Comment: "lift-no-content",
+			Data:    nil,
+			Translators: newFuncTuplesBuilder().
+				AppendType(ftLift).Build(),
+			Result: []interface{}{},
+		},
+		&streamTestcase{
+			Comment: "lift-1",
+			Data:    []int{1},
+			Translators: newFuncTuplesBuilder().
+				AppendType(ftLift).Build(),
+			Result: []interface{}{[]int{1}},
+		},
+		&streamTestcase{
+			Comment: "lift-people",
+			Data:    people(),
+			Translators: newFuncTuplesBuilder().
+				AppendType(ftLift).Build(),
+			Result: []interface{}{people()},
+		},
+		&streamTestcase{
+			Comment: "lift-flat-people",
+			Data:    people(),
+			Translators: newFuncTuplesBuilder().
+				AppendType(ftLift).
+				AppendType(ftFlat).Build(),
+			Result: func() []interface{} {
+				ps := people()
+				r := make([]interface{}, len(ps))
+				for i, p := range ps {
+					r[i] = p
+				}
+				return r
+			}(),
+		},
+
+		&streamTestcase{
 			Comment: "flat-no-content",
 			Data:    nil,
 			Translators: newFuncTuplesBuilder().
@@ -281,6 +321,19 @@ func TestStream(t *testing.T) {
 			Translators: newFuncTuplesBuilder().
 				AppendType(ftFlat).Build(),
 			Result: []interface{}{[]int{1}, []int{2, 3}, []int{123}},
+		},
+		&streamTestcase{
+			Comment: "flat-lift-strings",
+			Data: [][]string{
+				[]string{"fl", "at"},
+				[]string{"l", "ift"},
+			},
+			Translators: newFuncTuplesBuilder().
+				AppendType(ftFlat).
+				AppendType(ftLift).Build(),
+			Result: []interface{}{[]string{
+				"fl", "at", "l", "ift",
+			}},
 		},
 		&streamTestcase{
 			Comment: "sort-no-content",

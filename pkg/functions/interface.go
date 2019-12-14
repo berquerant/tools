@@ -35,8 +35,10 @@ type (
 		//
 		// less :: a -> a -> bool
 		Sort(less interface{}) Stream
-		// Flat flatten stream
+		// Flat flatten stream, single level
 		Flat() Stream
+		// Lift lift up stream, single level, into []interface{}
+		Lift() Stream
 	}
 
 	stream struct {
@@ -101,12 +103,12 @@ func (s *stream) Fold(aggregator interface{}, options ...FoldOptionFunc) Stream 
 	if err != nil {
 		panic(fmt.Sprintf("invalid function for Fold: %v", err))
 	}
-	folder, err := NewFoldExecutor(f, s, options...)
+	foldExecutor, err := NewFoldExecutor(f, s, options...)
 	if err != nil {
-		panic(fmt.Sprintf("cannot create folder for Fold: %v", err))
+		panic(fmt.Sprintf("cannot create fold executor for Fold: %v", err))
 	}
 
-	ret, err := folder.Fold()
+	ret, err := foldExecutor.Fold()
 	if err != nil {
 		panic(fmt.Sprintf("cannot fold for Fold: %v", err))
 	}
@@ -195,4 +197,44 @@ func (s *stream) Flat() Stream {
 	}
 
 	return NewStream(iterator.MustNew(iterator.Func(iFunc)))
+}
+
+func getCommonType(v []interface{}) reflect.Type {
+	defaultType := reflect.TypeOf([]interface{}{})
+	if len(v) == 0 {
+		return defaultType
+	}
+	t := reflect.TypeOf(v[0])
+	for _, x := range v {
+		if reflect.TypeOf(x).String() != t.String() {
+			return defaultType
+		}
+	}
+	return t
+}
+
+func (s *stream) Lift() Stream {
+	var err error
+	slice, err := iterator.ToSlice(s)
+	if err != nil {
+		panic(fmt.Sprintf("cannot create slice for Lift: %v", err))
+	}
+	if len(slice) == 0 {
+		return NewStream(iterator.MustNew(nil))
+	}
+
+	t := getCommonType(slice)
+	newSlice, err := reflection.Convert(slice, reflect.SliceOf(t))
+	if err != nil {
+		panic(fmt.Sprintf("cannot convert slice for Lift: %v", err))
+	}
+
+	var isYielded bool
+	return NewStream(iterator.MustNew(iterator.Func(func() (interface{}, error) {
+		if isYielded {
+			return nil, iterator.EOI
+		}
+		isYielded = true
+		return newSlice.Interface(), nil
+	})))
 }
