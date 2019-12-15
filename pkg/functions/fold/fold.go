@@ -21,8 +21,8 @@ type (
 		iv   interface{}
 	}
 
-	// FoldOptionFunc changes option of FoldExecutor
-	FoldOptionFunc func(*FoldExecutor)
+	// FoldOption changes option of FoldExecutor
+	FoldOption func(*FoldExecutor)
 )
 
 //go:generate stringer -type=FoldType -output generated.foldtype_string.go
@@ -61,21 +61,21 @@ func isValidFoldExecutor(ft FoldType, at AggregatorType) bool {
 }
 
 // WithFoldType specifies fold function type
-func WithFoldType(ft FoldType) FoldOptionFunc {
+func WithFoldType(ft FoldType) FoldOption {
 	return func(s *FoldExecutor) {
 		s.ft = ft
 	}
 }
 
 // WithInitialValue specifies fold initial value
-func WithInitialValue(v interface{}) FoldOptionFunc {
+func WithInitialValue(v interface{}) FoldOption {
 	return func(s *FoldExecutor) {
 		s.iv = v
 	}
 }
 
 // NewFoldExector creates FoldExecutor with default fold type R and initial zero value
-func NewFoldExecutor(f Aggregator, iter iterator.Iterator, options ...FoldOptionFunc) (*FoldExecutor, errors.Error) {
+func NewFoldExecutor(f Aggregator, iter iterator.Iterator, options ...FoldOption) (*FoldExecutor, errors.Error) {
 	folder := &FoldExecutor{
 		agg:  f,
 		iter: iter,
