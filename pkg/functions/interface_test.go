@@ -8,10 +8,10 @@ import (
 	"testing"
 	"tools/pkg/functions"
 	"tools/pkg/functions/consume"
+	"tools/pkg/functions/filter"
 	"tools/pkg/functions/fold"
 	"tools/pkg/functions/iterator"
 	"tools/pkg/functions/mapper"
-	"tools/pkg/functions/predicate"
 
 	"github.com/google/go-cmp/cmp"
 )
@@ -72,7 +72,7 @@ var (
 	errNotSupportedFuncType = fmt.Errorf("not supported func type")
 	funcTypeClassifiers     = []*funcTypeClassifier{
 		&funcTypeClassifier{ // override mapper :: a -> bool
-			Tester: predicate.IsPredicate,
+			Tester: filter.IsPredicate,
 			T:      ftPredicate,
 		},
 		&funcTypeClassifier{

@@ -10,10 +10,10 @@ import (
 	"tools/pkg/conv/reflection"
 	"tools/pkg/errors"
 	"tools/pkg/functions/consume"
+	"tools/pkg/functions/filter"
 	"tools/pkg/functions/fold"
 	"tools/pkg/functions/iterator"
 	"tools/pkg/functions/mapper"
-	"tools/pkg/functions/predicate"
 )
 
 type (
@@ -110,7 +110,7 @@ func (s *stream) Map(mapperFunc interface{}) Stream {
 }
 
 func (s *stream) Filter(predicateFunc interface{}) Stream {
-	f, err := predicate.NewPredicate(predicateFunc)
+	f, err := filter.NewPredicate(predicateFunc)
 	if err != nil {
 		return NewNilStream(newStreamError(errors.Filter, errMsgInvalidFunction, err))
 	}
