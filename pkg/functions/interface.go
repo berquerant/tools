@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"sort"
 	"tools/pkg/conv/reflection"
+	"tools/pkg/errors"
 	"tools/pkg/functions/iterator"
 )
 
@@ -39,25 +40,56 @@ type (
 		Flat() Stream
 		// Lift lift up stream, single level, into []interface{}
 		Lift() Stream
+		// Err get error during streaming.
+		// should invoke before extracting result.
+		// stream is nil stream when err is not nil
+		Err() error
 	}
 
 	stream struct {
 		iter iterator.Iterator
+		err  error
 	}
 )
 
+const (
+	errMsgInvalidFunction      = "invalid function"
+	errMsgCannotCreateExecutor = "cannot create executor"
+	errMsgCannotExecute        = "cannot execute"
+	errMsgCannotGetSlice       = "cannot get slice"
+	errMsgCannotCompare        = "cannot compare"
+	errMsgCannotConvert        = "cannot convert"
+)
+
+func newStreamError(code errors.Code, msg string, err error) error {
+	return errors.NewError().SetCode(code).SetError(fmt.Errorf("%s: %v", msg, err))
+}
+
 func NewStream(iter iterator.Iterator) Stream {
 	return &stream{iter: iter}
+}
+
+// NewNilStream create stream that yield no items.
+// Err() returns error if you set not nil error
+func NewNilStream(err error) Stream {
+	return &stream{
+		iter: iterator.MustNew(nil),
+		err:  err,
+	}
 }
 
 func (s *stream) Next() (interface{}, error) {
 	return s.iter.Next()
 }
 
+func (s *stream) Err() error {
+	return s.err
+}
+
 func (s *stream) Map(mapper interface{}) Stream {
 	f, err := NewMapper(mapper)
 	if err != nil {
-		panic(fmt.Sprintf("invalid function for Map: %v", err))
+		return NewNilStream(newStreamError(errors.Map, errMsgInvalidFunction, err))
 	}
 
 	return NewStream(iterator.MustNew(iterator.Func(func() (interface{}, error) {
@@ -76,7 +108,7 @@ func (s *stream) Map(mapper interface{}) Stream {
 func (s *stream) Filter(predicate interface{}) Stream {
 	f, err := NewPredicate(predicate)
 	if err != nil {
-		panic(fmt.Sprintf("invalid function for Filter: %v", err))
+		return NewNilStream(newStreamError(errors.Filter, errMsgInvalidFunction, err))
 	}
 
 	var iFunc func() (interface{}, error)
@@ -101,16 +133,16 @@ func (s *stream) Fold(aggregator interface{}, options ...FoldOptionFunc) Stream 
 	var err error
 	f, err := NewAggregator(aggregator)
 	if err != nil {
-		panic(fmt.Sprintf("invalid function for Fold: %v", err))
+		return NewNilStream(newStreamError(errors.Fold, errMsgInvalidFunction, err))
 	}
 	foldExecutor, err := NewFoldExecutor(f, s, options...)
 	if err != nil {
-		panic(fmt.Sprintf("cannot create fold executor for Fold: %v", err))
+		return NewNilStream(newStreamError(errors.Fold, errMsgCannotCreateExecutor, err))
 	}
 
 	ret, err := foldExecutor.Fold()
 	if err != nil {
-		panic(fmt.Sprintf("cannot fold for Fold: %v", err))
+		return NewNilStream(newStreamError(errors.Fold, errMsgCannotExecute, err))
 	}
 	return NewStream(iterator.MustNewFromInterfaces(ret))
 }
@@ -118,7 +150,7 @@ func (s *stream) Fold(aggregator interface{}, options ...FoldOptionFunc) Stream 
 func (s *stream) Consume(consumer interface{}) error {
 	f, err := NewConsumer(consumer)
 	if err != nil {
-		panic(fmt.Sprintf("invalid function for Consume: %v", err))
+		return newStreamError(errors.Consume, errMsgInvalidFunction, err)
 	}
 
 	for {
@@ -152,22 +184,26 @@ func (s *stream) Sort(less interface{}) Stream {
 	var err error
 	f, err := NewSorter(less)
 	if err != nil {
-		panic(fmt.Sprintf("invalid function for Sort: %v", err))
+		return NewNilStream(newStreamError(errors.Sort, errMsgInvalidFunction, err))
 	}
 	slice, err := iterator.ToSlice(s)
 	if err != nil {
-		panic(fmt.Sprintf("cannot get slice for Sort: %v", err))
+		return NewNilStream(newStreamError(errors.Sort, errMsgCannotGetSlice, err))
 	}
 	if len(slice) == 0 {
-		return NewStream(iterator.MustNew(nil))
+		return NewNilStream(nil)
 	}
+	var sortError error
 	sort.SliceStable(slice, func(i, j int) bool {
 		ret, err := f.Apply(slice[i], slice[j])
-		if err != nil {
-			panic(fmt.Sprintf("cannot compare for Sort: %v", err))
+		if err != nil && sortError == nil {
+			sortError = err
 		}
 		return ret
 	})
+	if sortError != nil {
+		return NewNilStream(newStreamError(errors.Sort, errMsgCannotCompare, sortError))
+	}
 	return NewStream(iterator.MustNew(slice))
 }
 
@@ -217,16 +253,16 @@ func (s *stream) Lift() Stream {
 	var err error
 	slice, err := iterator.ToSlice(s)
 	if err != nil {
-		panic(fmt.Sprintf("cannot create slice for Lift: %v", err))
+		return NewNilStream(newStreamError(errors.Lift, errMsgCannotGetSlice, err))
 	}
 	if len(slice) == 0 {
-		return NewStream(iterator.MustNew(nil))
+		return NewNilStream(nil)
 	}
 
 	t := getCommonType(slice)
 	newSlice, err := reflection.Convert(slice, reflect.SliceOf(t))
 	if err != nil {
-		panic(fmt.Sprintf("cannot convert slice for Lift: %v", err))
+		return NewNilStream(newStreamError(errors.Lift, errMsgCannotConvert, err))
 	}
 
 	var isYielded bool

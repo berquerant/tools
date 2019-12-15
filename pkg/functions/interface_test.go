@@ -174,6 +174,9 @@ func (s *streamTestcase) Test(t *testing.T) {
 		}
 		st = ret
 	}
+	if err := st.Err(); err != nil {
+		t.Errorf("stream error: %v", err)
+	}
 	actual, err := iterator.ToSlice(st)
 	if err != nil {
 		t.Errorf("cannot get result: %v", err)
