@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 	"tools/pkg/functions"
+	"tools/pkg/functions/fold"
 	"tools/pkg/functions/iterator"
 
 	"github.com/google/go-cmp/cmp"
@@ -76,7 +77,7 @@ var (
 			T:      ftMapper,
 		},
 		&funcTypeClassifier{
-			Tester: functions.IsAggregator,
+			Tester: fold.IsAggregator,
 			T:      ftAggregator,
 		},
 		&funcTypeClassifier{
@@ -112,7 +113,7 @@ func (s *funcTuple) apply(st functions.Stream) (ret functions.Stream, e error) {
 	case ftPredicate:
 		return st.Filter(s.F), nil
 	case ftAggregator:
-		return st.Fold(s.F, functions.WithInitialValue(s.IV)), nil
+		return st.Fold(s.F, fold.WithInitialValue(s.IV)), nil
 	case ftSorter:
 		return st.Sort(s.F), nil
 	case ftFlat:
