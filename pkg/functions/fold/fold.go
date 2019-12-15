@@ -23,10 +23,10 @@ type (
 
 	// FoldOptionFunc changes option of FoldExecutor
 	FoldOptionFunc func(*FoldExecutor)
-
-	// FoldType indicates type of fold
-	FoldType int
 )
+
+//go:generate stringer -type=FoldType -output generated.foldtype_string.go
+type FoldType int
 
 const (
 	UnknownFold FoldType = iota

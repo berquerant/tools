@@ -26,10 +26,10 @@ type (
 		t  reflect.Type
 		at AggregatorType
 	}
-
-	// AggregatorType indicates signature of aggregator
-	AggregatorType int
 )
+
+//go:generate stringer -type=AggregatorType -output generated.aggregatortype_string.go
+type AggregatorType int
 
 const (
 	UnknownAggregator AggregatorType = iota
