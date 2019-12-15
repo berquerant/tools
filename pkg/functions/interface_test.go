@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 	"tools/pkg/functions"
+	"tools/pkg/functions/consume"
 	"tools/pkg/functions/fold"
 	"tools/pkg/functions/iterator"
 	"tools/pkg/functions/mapper"
@@ -83,7 +84,7 @@ var (
 			T:      ftAggregator,
 		},
 		&funcTypeClassifier{
-			Tester: functions.IsConsumer,
+			Tester: consume.IsConsumer,
 			T:      ftConsumer,
 		},
 		&funcTypeClassifier{

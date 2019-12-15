@@ -9,6 +9,7 @@ import (
 	"sort"
 	"tools/pkg/conv/reflection"
 	"tools/pkg/errors"
+	"tools/pkg/functions/consume"
 	"tools/pkg/functions/fold"
 	"tools/pkg/functions/iterator"
 	"tools/pkg/functions/mapper"
@@ -151,7 +152,7 @@ func (s *stream) Fold(aggregator interface{}, options ...fold.FoldOptionFunc) St
 }
 
 func (s *stream) Consume(consumer interface{}) error {
-	f, err := NewConsumer(consumer)
+	f, err := consume.NewConsumer(consumer)
 	if err != nil {
 		return newStreamError(errors.Consume, errMsgInvalidFunction, err)
 	}
