@@ -12,6 +12,7 @@ import (
 	"tools/pkg/functions/fold"
 	"tools/pkg/functions/iterator"
 	"tools/pkg/functions/mapper"
+	"tools/pkg/functions/predicate"
 )
 
 type (
@@ -107,8 +108,8 @@ func (s *stream) Map(mapperFunc interface{}) Stream {
 	})))
 }
 
-func (s *stream) Filter(predicate interface{}) Stream {
-	f, err := NewPredicate(predicate)
+func (s *stream) Filter(predicateFunc interface{}) Stream {
+	f, err := predicate.NewPredicate(predicateFunc)
 	if err != nil {
 		return NewNilStream(newStreamError(errors.Filter, errMsgInvalidFunction, err))
 	}
