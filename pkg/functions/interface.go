@@ -11,6 +11,7 @@ import (
 	"tools/pkg/errors"
 	"tools/pkg/functions/fold"
 	"tools/pkg/functions/iterator"
+	"tools/pkg/functions/mapper"
 )
 
 type (
@@ -87,8 +88,8 @@ func (s *stream) Err() error {
 	return s.err
 }
 
-func (s *stream) Map(mapper interface{}) Stream {
-	f, err := NewMapper(mapper)
+func (s *stream) Map(mapperFunc interface{}) Stream {
+	f, err := mapper.NewMapper(mapperFunc)
 	if err != nil {
 		return NewNilStream(newStreamError(errors.Map, errMsgInvalidFunction, err))
 	}

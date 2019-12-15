@@ -9,6 +9,7 @@ import (
 	"tools/pkg/functions"
 	"tools/pkg/functions/fold"
 	"tools/pkg/functions/iterator"
+	"tools/pkg/functions/mapper"
 
 	"github.com/google/go-cmp/cmp"
 )
@@ -73,7 +74,7 @@ var (
 			T:      ftPredicate,
 		},
 		&funcTypeClassifier{
-			Tester: functions.IsMapper,
+			Tester: mapper.IsMapper,
 			T:      ftMapper,
 		},
 		&funcTypeClassifier{
