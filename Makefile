@@ -1,5 +1,5 @@
 .PHONY: clean
-clean:
+clean: rm-generated
 	@rm -rf dist
 	@go mod tidy
 
@@ -14,3 +14,14 @@ dist/bin/goscript: dist
 
 install-goscript:
 	@go install tools/cmd/goscript
+
+go-stringer:
+	@go get golang.org/x/tools/cmd/stringer
+
+.PHONY: generate
+generate:
+	@go generate ./pkg/...
+
+.PHONY: rm-generated
+rm-generated:
+	@find . -type f -name "*generated\.*\.go" | xargs rm

@@ -6,8 +6,6 @@ package errors
 import "fmt"
 
 type (
-	// Code is error code, category of error
-	Code int
 	// Error is extended error
 	Error interface {
 		error
@@ -20,6 +18,9 @@ type (
 		E error
 	}
 )
+
+//go:generate stringer -type=Code -output generated.code_string.go
+type Code int
 
 const (
 	// Unknown is unknown termination
@@ -42,6 +43,16 @@ const (
 	Conversion
 	// Fold is fold error
 	Fold
+	// Map is map error
+	Map
+	// Filter is filter error
+	Filter
+	// Consume is consume error
+	Consume
+	// Sort is sort error
+	Sort
+	// Lift is lift error
+	Lift
 )
 
 func NewError() Error {
