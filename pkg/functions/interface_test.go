@@ -12,6 +12,7 @@ import (
 	"tools/pkg/functions/fold"
 	"tools/pkg/functions/iterator"
 	"tools/pkg/functions/mapper"
+	"tools/pkg/functions/sorter"
 
 	"github.com/google/go-cmp/cmp"
 )
@@ -88,7 +89,7 @@ var (
 			T:      ftConsumer,
 		},
 		&funcTypeClassifier{
-			Tester: functions.IsSorter,
+			Tester: sorter.IsSorter,
 			T:      ftSorter,
 		},
 	}

@@ -1,4 +1,4 @@
-package functions
+package sorter
 
 import (
 	"fmt"

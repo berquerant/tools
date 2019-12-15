@@ -14,6 +14,7 @@ import (
 	"tools/pkg/functions/fold"
 	"tools/pkg/functions/iterator"
 	"tools/pkg/functions/mapper"
+	"tools/pkg/functions/sorter"
 )
 
 type (
@@ -186,7 +187,7 @@ func (s *stream) As(v interface{}) error {
 
 func (s *stream) Sort(less interface{}) Stream {
 	var err error
-	f, err := NewSorter(less)
+	f, err := sorter.NewSorter(less)
 	if err != nil {
 		return NewNilStream(newStreamError(errors.Sort, errMsgInvalidFunction, err))
 	}
