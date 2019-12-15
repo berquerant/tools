@@ -41,7 +41,7 @@ const (
 )
 
 var (
-	validFolderMap = map[FoldType]func(AggregatorType) bool{
+	validFoldExecutorMap = map[FoldType]func(AggregatorType) bool{
 		FoldTypeR: func(at AggregatorType) bool { return at == RightAggregator || at == PerfectAggregator },
 		FoldTypeL: func(at AggregatorType) bool { return at == LeftAggregator || at == PerfectAggregator },
 		FoldTypeT: func(at AggregatorType) bool { return at == PerfectAggregator },
@@ -56,7 +56,7 @@ var (
 )
 
 func isValidFoldExecutor(ft FoldType, at AggregatorType) bool {
-	t, ok := validFolderMap[ft]
+	t, ok := validFoldExecutorMap[ft]
 	return ok && t(at)
 }
 
