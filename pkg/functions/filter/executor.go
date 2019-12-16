@@ -36,18 +36,31 @@ func NewExecutor(f Predicate, iter iterator.Iterator, options ...Option) (*Execu
 	return executor, nil
 }
 
-func (s *Executor) Next() (interface{}, error) {
-	s.hooks.Execute(executor.RunningHook)
-	x, err := s.iter.Next()
-	if err != nil {
-		return nil, err
+func (s *Executor) Execute() iterator.Iterator {
+	var (
+		iFunc    func() (interface{}, error)
+		isBefore = true
+	)
+	iFunc = func() (interface{}, error) {
+		if isBefore {
+			isBefore = false
+			s.hooks.Execute(executor.BeforeHook)
+		}
+		x, err := s.iter.Next()
+		if err != nil {
+			s.hooks.Execute(executor.AfterHook)
+			return nil, err
+		}
+		s.hooks.Execute(executor.RunningHook)
+		ret, err := s.f.Apply(x)
+		if err != nil {
+			s.hooks.Execute(executor.AfterHook)
+			return nil, err
+		}
+		if !ret {
+			return iFunc()
+		}
+		return x, nil
 	}
-	ret, err := s.f.Apply(x)
-	if err != nil {
-		return nil, err
-	}
-	if !ret {
-		return s.Next()
-	}
-	return x, nil
+	return iterator.MustNew(iterator.Func(iFunc))
 }

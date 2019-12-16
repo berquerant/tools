@@ -112,7 +112,7 @@ func (s *stream) Filter(predicateFunc interface{}, options ...filter.Option) Str
 	if err != nil {
 		return NewNilStream(newStreamError(errors.Filter, errMsgCannotCreateExecutor, err))
 	}
-	return NewStream(filterExecutor)
+	return NewStream(filterExecutor.Execute())
 }
 
 func (s *stream) Fold(aggregator interface{}, options ...fold.Option) Stream {
