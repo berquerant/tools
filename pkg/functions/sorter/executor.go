@@ -37,7 +37,7 @@ func NewExecutor(f Sorter, iter iterator.Iterator, options ...Option) (*Executor
 	return executor, nil
 }
 
-func (s *Executor) Execute() (interface{}, error) {
+func (s *Executor) Execute() (iterator.Iterator, error) {
 	s.hooks.Execute(executor.BeforeHook)
 	defer s.hooks.Execute(executor.AfterHook)
 	slice, err := iterator.ToSlice(s.iter)
@@ -56,5 +56,5 @@ func (s *Executor) Execute() (interface{}, error) {
 	if sError != nil {
 		return nil, sError
 	}
-	return slice, nil
+	return iterator.MustNew(slice), nil
 }

@@ -167,11 +167,11 @@ func (s *stream) Sort(less interface{}, options ...sorter.Option) Stream {
 	if err != nil {
 		return NewNilStream(newStreamError(errors.Sort, errMsgCannotCreateExecutor, err))
 	}
-	slice, err := sortExecutor.Execute()
+	iter, err := sortExecutor.Execute()
 	if err != nil {
 		return NewNilStream(newStreamError(errors.Sort, errMsgCannotCompare, err))
 	}
-	return NewStream(iterator.MustNew(slice))
+	return NewStream(iter)
 }
 
 func (s *stream) Flat(options ...flat.Option) Stream {
