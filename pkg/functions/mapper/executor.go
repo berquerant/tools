@@ -36,15 +36,28 @@ func NewExecutor(f Mapper, iter iterator.Iterator, options ...Option) (*Executor
 	return executor, nil
 }
 
-func (s *Executor) Next() (interface{}, error) {
-	x, err := s.iter.Next()
-	if err != nil {
-		return nil, err
+func (s *Executor) Execute() iterator.Iterator {
+	var (
+		iFunc    func() (interface{}, error)
+		isBefore = true
+	)
+	iFunc = func() (interface{}, error) {
+		if isBefore {
+			isBefore = false
+			s.hooks.Execute(executor.BeforeHook)
+		}
+		x, err := s.iter.Next()
+		if err != nil {
+			s.hooks.Execute(executor.AfterHook)
+			return nil, err
+		}
+		s.hooks.Execute(executor.RunningHook)
+		ret, err := s.f.Apply(x)
+		if err != nil {
+			s.hooks.Execute(executor.AfterHook)
+			return nil, err
+		}
+		return ret, nil
 	}
-	s.hooks.Execute(executor.RunningHook)
-	ret, err := s.f.Apply(x)
-	if err != nil {
-		return nil, err
-	}
-	return ret, nil
+	return iterator.MustNew(iterator.Func(iFunc))
 }

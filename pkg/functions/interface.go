@@ -100,7 +100,7 @@ func (s *stream) Map(mapperFunc interface{}, options ...mapper.Option) Stream {
 	if err != nil {
 		return NewNilStream(newStreamError(errors.Map, errMsgCannotCreateExecutor, err))
 	}
-	return NewStream(mapExecutor)
+	return NewStream(mapExecutor.Execute())
 }
 
 func (s *stream) Filter(predicateFunc interface{}, options ...filter.Option) Stream {
