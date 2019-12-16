@@ -1,6 +1,9 @@
 package functions
 
-import "tools/pkg/functions/fold"
+import (
+	"tools/pkg/functions/fold"
+	"tools/pkg/functions/mapper"
+)
 
 type (
 	// Script can be converted into a stream
@@ -135,7 +138,13 @@ func (s *streamBuilder) Append(x Script) StreamBuilder {
 }
 
 func (s *streamBuilder) appendMap(x Script) Stream {
-	return s.st.Map(x.Instance())
+	opts := []mapper.Option{}
+	for i := 0; i < x.NumOption(); i++ {
+		if p, ok := x.Option(i).(mapper.Option); ok {
+			opts = append(opts, p)
+		}
+	}
+	return s.st.Map(x.Instance(), opts...)
 }
 
 func (s *streamBuilder) appendFilter(x Script) Stream {

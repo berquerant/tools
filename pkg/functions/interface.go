@@ -24,7 +24,7 @@ type (
 		// Map convert each elements
 		//
 		// mapper :: a -> b
-		Map(mapper interface{}) Stream
+		Map(mapper interface{}, options ...mapper.Option) Stream
 		// Filter select elements
 		//
 		// predicate :: a -> bool
@@ -91,23 +91,16 @@ func (s *stream) Err() error {
 	return s.err
 }
 
-func (s *stream) Map(mapperFunc interface{}) Stream {
+func (s *stream) Map(mapperFunc interface{}, options ...mapper.Option) Stream {
 	f, err := mapper.NewMapper(mapperFunc)
 	if err != nil {
 		return NewNilStream(newStreamError(errors.Map, errMsgInvalidFunction, err))
 	}
-
-	return NewStream(iterator.MustNew(iterator.Func(func() (interface{}, error) {
-		x, err := s.Next()
-		if err != nil {
-			return nil, err
-		}
-		ret, err := f.Apply(x)
-		if err != nil {
-			return nil, err
-		}
-		return ret, nil
-	})))
+	mapExecutor, err := mapper.NewExecutor(f, s, options...)
+	if err != nil {
+		return NewNilStream(newStreamError(errors.Map, errMsgCannotCreateExecutor, err))
+	}
+	return NewStream(mapExecutor)
 }
 
 func (s *stream) Filter(predicateFunc interface{}) Stream {
