@@ -6,7 +6,6 @@ package functions
 import (
 	"fmt"
 	"reflect"
-	"sort"
 	"tools/pkg/conv/reflection"
 	"tools/pkg/errors"
 	"tools/pkg/functions/consume"
@@ -40,7 +39,7 @@ type (
 		// Sort sort stream
 		//
 		// less :: a -> a -> bool
-		Sort(less interface{}) Stream
+		Sort(less interface{}, options ...sorter.Option) Stream
 		// Flat flatten stream, single level
 		Flat() Stream
 		// Lift lift up stream, single level, into []interface{}
@@ -157,29 +156,19 @@ func (s *stream) As(v interface{}) error {
 	return nil
 }
 
-func (s *stream) Sort(less interface{}) Stream {
+func (s *stream) Sort(less interface{}, options ...sorter.Option) Stream {
 	var err error
 	f, err := sorter.NewSorter(less)
 	if err != nil {
 		return NewNilStream(newStreamError(errors.Sort, errMsgInvalidFunction, err))
 	}
-	slice, err := iterator.ToSlice(s)
+	sortExecutor, err := sorter.NewExecutor(f, s, options...)
 	if err != nil {
-		return NewNilStream(newStreamError(errors.Sort, errMsgCannotGetSlice, err))
+		return NewNilStream(newStreamError(errors.Sort, errMsgCannotCreateExecutor, err))
 	}
-	if len(slice) == 0 {
-		return NewNilStream(nil)
-	}
-	var sortError error
-	sort.SliceStable(slice, func(i, j int) bool {
-		ret, err := f.Apply(slice[i], slice[j])
-		if err != nil && sortError == nil {
-			sortError = err
-		}
-		return ret
-	})
-	if sortError != nil {
-		return NewNilStream(newStreamError(errors.Sort, errMsgCannotCompare, sortError))
+	slice, err := sortExecutor.Execute()
+	if err != nil {
+		return NewNilStream(newStreamError(errors.Sort, errMsgCannotCompare, err))
 	}
 	return NewStream(iterator.MustNew(slice))
 }

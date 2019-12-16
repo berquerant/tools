@@ -4,6 +4,7 @@ import (
 	"tools/pkg/functions/filter"
 	"tools/pkg/functions/fold"
 	"tools/pkg/functions/mapper"
+	"tools/pkg/functions/sorter"
 )
 
 type (
@@ -169,7 +170,13 @@ func (s *streamBuilder) appendFold(x Script) Stream {
 }
 
 func (s *streamBuilder) appendSort(x Script) Stream {
-	return s.st.Sort(x.Instance())
+	opts := []sorter.Option{}
+	for i := 0; i < x.NumOption(); i++ {
+		if p, ok := x.Option(i).(sorter.Option); ok {
+			opts = append(opts, p)
+		}
+	}
+	return s.st.Sort(x.Instance(), opts...)
 }
 
 func (s *streamBuilder) appendFlat(x Script) Stream {
