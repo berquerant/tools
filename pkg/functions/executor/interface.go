@@ -15,7 +15,7 @@ type (
 	}
 )
 
-//go:generate stringer -type=HookType -o generated.hooktype_string.go
+//go:generate stringer -type=HookType -output generated.hooktype_string.go
 type HookType int
 
 const (

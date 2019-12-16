@@ -143,9 +143,9 @@ func (s *streamBuilder) appendFilter(x Script) Stream {
 }
 
 func (s *streamBuilder) appendFold(x Script) Stream {
-	opts := []fold.FoldOption{}
+	opts := []fold.Option{}
 	for i := 0; i < x.NumOption(); i++ {
-		if p, ok := x.Option(i).(fold.FoldOption); ok {
+		if p, ok := x.Option(i).(fold.Option); ok {
 			opts = append(opts, p)
 		}
 	}

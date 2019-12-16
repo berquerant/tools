@@ -8,107 +8,107 @@ import (
 )
 
 var (
-	InvalidFoldType = errors.NewError().SetCode(errors.Fold).SetError(fmt.Errorf("invalid fold type"))
+	InvalidType = errors.NewError().SetCode(errors.Fold).SetError(fmt.Errorf("invalid fold type"))
 )
 
 type (
-	FoldFunc func(f Aggregator, acc interface{}, iter iterator.Iterator) (interface{}, error)
+	Func func(f Aggregator, acc interface{}, iter iterator.Iterator) (interface{}, error)
 
-	// FoldExecutor is fold executor
-	FoldExecutor struct {
+	// Executor is fold executor
+	Executor struct {
 		hooks executor.Hookable
 		agg   Aggregator
 		iter  iterator.Iterator
-		ft    FoldType
+		ft    Type
 		iv    interface{}
 	}
 
-	// FoldOption changes option of FoldExecutor
-	FoldOption func(*FoldExecutor)
+	// Option changes option of Executor
+	Option func(*Executor)
 )
 
-//go:generate stringer -type=FoldType -output generated.foldtype_string.go
-type FoldType int
+//go:generate stringer -type=Type -output generated.type_string.go
+type Type int
 
 const (
-	UnknownFold FoldType = iota
-	// FoldTypeR for Foldr
-	FoldTypeR
-	// FoldTypeL for Foldl
-	FoldTypeL
-	// FoldTypeT for Foldt
-	FoldTypeT
-	// FoldTypeI for Foldi
-	FoldTypeI
+	TypeUnknown Type = iota
+	// TypeR for Foldr
+	TypeR
+	// TypeL for Foldl
+	TypeL
+	// TypeT for Foldt
+	TypeT
+	// TypeI for Foldi
+	TypeI
 )
 
 var (
-	validFoldExecutorMap = map[FoldType]func(AggregatorType) bool{
-		FoldTypeR: func(at AggregatorType) bool { return at == RightAggregator || at == PerfectAggregator },
-		FoldTypeL: func(at AggregatorType) bool { return at == LeftAggregator || at == PerfectAggregator },
-		FoldTypeT: func(at AggregatorType) bool { return at == PerfectAggregator },
-		FoldTypeI: func(at AggregatorType) bool { return at == PerfectAggregator },
+	validExecutorMap = map[Type]func(AggregatorType) bool{
+		TypeR: func(at AggregatorType) bool { return at == RightAggregator || at == PerfectAggregator },
+		TypeL: func(at AggregatorType) bool { return at == LeftAggregator || at == PerfectAggregator },
+		TypeT: func(at AggregatorType) bool { return at == PerfectAggregator },
+		TypeI: func(at AggregatorType) bool { return at == PerfectAggregator },
 	}
-	foldFuncMap = map[FoldType]FoldFunc{
-		FoldTypeR: Foldr,
-		FoldTypeL: Foldl,
-		FoldTypeT: Foldt,
-		FoldTypeI: Foldi,
+	funcMap = map[Type]Func{
+		TypeR: Foldr,
+		TypeL: Foldl,
+		TypeT: Foldt,
+		TypeI: Foldi,
 	}
 )
 
-func isValidFoldExecutor(ft FoldType, at AggregatorType) bool {
-	t, ok := validFoldExecutorMap[ft]
+func isValidExecutor(ft Type, at AggregatorType) bool {
+	t, ok := validExecutorMap[ft]
 	return ok && t(at)
 }
 
-// WithFoldType specifies fold function type
-func WithFoldType(ft FoldType) FoldOption {
-	return func(s *FoldExecutor) {
+// WithType specifies fold function type
+func WithType(ft Type) Option {
+	return func(s *Executor) {
 		s.ft = ft
 	}
 }
 
 // WithInitialValue specifies fold initial value
-func WithInitialValue(v interface{}) FoldOption {
-	return func(s *FoldExecutor) {
+func WithInitialValue(v interface{}) Option {
+	return func(s *Executor) {
 		s.iv = v
 	}
 }
 
 // WithHook add hook
-func WithHook(ht executor.HookType, h executor.Hook) FoldOption {
-	return func(s *FoldExecutor) {
+func WithHook(ht executor.HookType, h executor.Hook) Option {
+	return func(s *Executor) {
 		s.hooks.AddHook(ht, h)
 	}
 }
 
-// NewFoldExector creates FoldExecutor with default fold type R and initial zero value
-func NewFoldExecutor(f Aggregator, iter iterator.Iterator, options ...FoldOption) (*FoldExecutor, errors.Error) {
-	foldExecutor := &FoldExecutor{
+// NewFoldExector creates Executor with default fold type R and initial zero value
+func NewExecutor(f Aggregator, iter iterator.Iterator, options ...Option) (*Executor, errors.Error) {
+	executor := &Executor{
 		hooks: executor.NewHookable(),
 		agg:   f,
 		iter:  iter,
-		ft:    FoldTypeR,
+		ft:    TypeR,
 		iv:    f.IV(),
 	}
 	for _, opt := range options {
-		opt(foldExecutor)
+		opt(executor)
 	}
-	if !isValidFoldExecutor(foldExecutor.ft, f.Type()) {
-		return nil, InvalidFoldType
+	if !isValidExecutor(executor.ft, f.Type()) {
+		return nil, InvalidType
 	}
-	return foldExecutor, nil
+	return executor, nil
 }
 
-func (s *FoldExecutor) Fold() (interface{}, error) {
+func (s *Executor) Fold() (interface{}, error) {
 	s.hooks.Execute(executor.BeforeHookType)
 	defer s.hooks.Execute(executor.AfterHookType)
-	if f, ok := foldFuncMap[s.ft]; ok {
+	if f, ok := funcMap[s.ft]; ok {
 		s.hooks.Execute(executor.RunningHookType)
 		return f(s.agg, s.iv, s.iter)
 	}
-	return nil, InvalidFoldType
+	return nil, InvalidType
 }
 
 // Foldr requires aggregator :: a -> b -> b

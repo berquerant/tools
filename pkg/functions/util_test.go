@@ -118,7 +118,7 @@ func TestStreamBuilder(t *testing.T) {
 						return d
 					},
 					O: []interface{}{
-						fold.WithFoldType(fold.FoldTypeR),
+						fold.WithType(fold.TypeR),
 						fold.WithInitialValue(map[string]int{
 							"ENGLAND":  10,
 							"SLOVAKIA": 2,

@@ -30,7 +30,7 @@ type (
 		// predicate :: a -> bool
 		Filter(predicate interface{}) Stream
 		// Fold aggregate elements
-		Fold(aggregator interface{}, options ...fold.FoldOption) Stream
+		Fold(aggregator interface{}, options ...fold.Option) Stream
 		// Consume consume stream
 		//
 		// consumer :: a
@@ -134,13 +134,13 @@ func (s *stream) Filter(predicateFunc interface{}) Stream {
 	return NewStream(iterator.MustNew(iterator.Func(iFunc)))
 }
 
-func (s *stream) Fold(aggregator interface{}, options ...fold.FoldOption) Stream {
+func (s *stream) Fold(aggregator interface{}, options ...fold.Option) Stream {
 	var err error
 	f, err := fold.NewAggregator(aggregator)
 	if err != nil {
 		return NewNilStream(newStreamError(errors.Fold, errMsgInvalidFunction, err))
 	}
-	foldExecutor, err := fold.NewFoldExecutor(f, s, options...)
+	foldExecutor, err := fold.NewExecutor(f, s, options...)
 	if err != nil {
 		return NewNilStream(newStreamError(errors.Fold, errMsgCannotCreateExecutor, err))
 	}
