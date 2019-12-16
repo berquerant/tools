@@ -3,6 +3,7 @@ package fold
 import (
 	"fmt"
 	"tools/pkg/errors"
+	"tools/pkg/functions/executor"
 	"tools/pkg/functions/iterator"
 )
 
@@ -15,10 +16,11 @@ type (
 
 	// FoldExecutor is fold executor
 	FoldExecutor struct {
-		agg  Aggregator
-		iter iterator.Iterator
-		ft   FoldType
-		iv   interface{}
+		hooks executor.Hookable
+		agg   Aggregator
+		iter  iterator.Iterator
+		ft    FoldType
+		iv    interface{}
 	}
 
 	// FoldOption changes option of FoldExecutor
@@ -74,25 +76,36 @@ func WithInitialValue(v interface{}) FoldOption {
 	}
 }
 
+// WithHook add hook
+func WithHook(ht executor.HookType, h executor.Hook) FoldOption {
+	return func(s *FoldExecutor) {
+		s.hooks.AddHook(ht, h)
+	}
+}
+
 // NewFoldExector creates FoldExecutor with default fold type R and initial zero value
 func NewFoldExecutor(f Aggregator, iter iterator.Iterator, options ...FoldOption) (*FoldExecutor, errors.Error) {
-	folder := &FoldExecutor{
-		agg:  f,
-		iter: iter,
-		ft:   FoldTypeR,
-		iv:   f.IV(),
+	foldExecutor := &FoldExecutor{
+		hooks: executor.NewHookable(),
+		agg:   f,
+		iter:  iter,
+		ft:    FoldTypeR,
+		iv:    f.IV(),
 	}
 	for _, opt := range options {
-		opt(folder)
+		opt(foldExecutor)
 	}
-	if !isValidFoldExecutor(folder.ft, f.Type()) {
+	if !isValidFoldExecutor(foldExecutor.ft, f.Type()) {
 		return nil, InvalidFoldType
 	}
-	return folder, nil
+	return foldExecutor, nil
 }
 
 func (s *FoldExecutor) Fold() (interface{}, error) {
+	s.hooks.Execute(executor.BeforeHookType)
+	defer s.hooks.Execute(executor.AfterHookType)
 	if f, ok := foldFuncMap[s.ft]; ok {
+		s.hooks.Execute(executor.RunningHookType)
 		return f(s.agg, s.iv, s.iter)
 	}
 	return nil, InvalidFoldType
