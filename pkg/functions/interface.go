@@ -13,6 +13,7 @@ import (
 	"tools/pkg/functions/flat"
 	"tools/pkg/functions/fold"
 	"tools/pkg/functions/iterator"
+	"tools/pkg/functions/lift"
 	"tools/pkg/functions/mapper"
 	"tools/pkg/functions/sorter"
 )
@@ -44,7 +45,7 @@ type (
 		// Flat flatten stream, single level
 		Flat(options ...flat.Option) Stream
 		// Lift lift up stream, single level, into []interface{}
-		Lift() Stream
+		Lift(options ...lift.Option) Stream
 		// Err get error during streaming.
 		// should invoke before extracting result.
 		// stream is nil stream when err is not nil
@@ -61,9 +62,7 @@ const (
 	errMsgInvalidFunction      = "invalid function"
 	errMsgCannotCreateExecutor = "cannot create executor"
 	errMsgCannotExecute        = "cannot execute"
-	errMsgCannotGetSlice       = "cannot get slice"
 	errMsgCannotCompare        = "cannot compare"
-	errMsgCannotConvert        = "cannot convert"
 )
 
 func newStreamError(code errors.Code, msg string, err error) error {
@@ -182,42 +181,15 @@ func (s *stream) Flat(options ...flat.Option) Stream {
 	return NewStream(flatExecutor.Execute())
 }
 
-func getCommonType(v []interface{}) reflect.Type {
-	defaultType := reflect.TypeOf([]interface{}{})
-	if len(v) == 0 {
-		return defaultType
-	}
-	t := reflect.TypeOf(v[0])
-	for _, x := range v {
-		if reflect.TypeOf(x).String() != t.String() {
-			return defaultType
-		}
-	}
-	return t
-}
-
-func (s *stream) Lift() Stream {
+func (s *stream) Lift(options ...lift.Option) Stream {
 	var err error
-	slice, err := iterator.ToSlice(s)
+	liftExecutor, err := lift.NewExecutor(s, options...)
 	if err != nil {
-		return NewNilStream(newStreamError(errors.Lift, errMsgCannotGetSlice, err))
+		return NewNilStream(newStreamError(errors.Lift, errMsgCannotCreateExecutor, err))
 	}
-	if len(slice) == 0 {
-		return NewNilStream(nil)
-	}
-
-	t := getCommonType(slice)
-	newSlice, err := reflection.Convert(slice, reflect.SliceOf(t))
+	iter, err := liftExecutor.Execute()
 	if err != nil {
-		return NewNilStream(newStreamError(errors.Lift, errMsgCannotConvert, err))
+		return NewNilStream(newStreamError(errors.Lift, errMsgCannotExecute, err))
 	}
-
-	var isYielded bool
-	return NewStream(iterator.MustNew(iterator.Func(func() (interface{}, error) {
-		if isYielded {
-			return nil, iterator.EOI
-		}
-		isYielded = true
-		return newSlice.Interface(), nil
-	})))
+	return NewStream(iter)
 }

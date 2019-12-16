@@ -4,6 +4,7 @@ import (
 	"tools/pkg/functions/filter"
 	"tools/pkg/functions/flat"
 	"tools/pkg/functions/fold"
+	"tools/pkg/functions/lift"
 	"tools/pkg/functions/mapper"
 	"tools/pkg/functions/sorter"
 )
@@ -191,7 +192,13 @@ func (s *streamBuilder) appendFlat(x Script) Stream {
 }
 
 func (s *streamBuilder) appendLift(x Script) Stream {
-	return s.st.Lift()
+	opts := []lift.Option{}
+	for i := 0; i < x.NumOption(); i++ {
+		if p, ok := x.Option(i).(lift.Option); ok {
+			opts = append(opts, p)
+		}
+	}
+	return s.st.Lift(opts...)
 }
 
 func (s *streamBuilder) Build() Stream {
