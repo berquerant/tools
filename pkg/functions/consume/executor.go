@@ -36,7 +36,7 @@ func NewExecutor(f Consumer, iter iterator.Iterator, options ...Option) (*Execut
 	return executor, nil
 }
 
-func (s *Executor) Consume() error {
+func (s *Executor) Execute() error {
 	s.hooks.Execute(executor.BeforeHook)
 	defer s.hooks.Execute(executor.AfterHook)
 	for {

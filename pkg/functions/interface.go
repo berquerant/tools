@@ -125,8 +125,7 @@ func (s *stream) Fold(aggregator interface{}, options ...fold.Option) Stream {
 	if err != nil {
 		return NewNilStream(newStreamError(errors.Fold, errMsgCannotCreateExecutor, err))
 	}
-
-	ret, err := foldExecutor.Fold()
+	ret, err := foldExecutor.Execute()
 	if err != nil {
 		return NewNilStream(newStreamError(errors.Fold, errMsgCannotExecute, err))
 	}
@@ -142,7 +141,7 @@ func (s *stream) Consume(consumer interface{}, options ...consume.Option) error 
 	if err != nil {
 		return newStreamError(errors.Consume, errMsgCannotCreateExecutor, err)
 	}
-	return consumeExecutor.Consume()
+	return consumeExecutor.Execute()
 }
 
 func (s *stream) As(v interface{}) error {

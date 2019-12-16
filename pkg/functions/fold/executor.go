@@ -101,7 +101,7 @@ func NewExecutor(f Aggregator, iter iterator.Iterator, options ...Option) (*Exec
 	return executor, nil
 }
 
-func (s *Executor) Fold() (interface{}, error) {
+func (s *Executor) Execute() (interface{}, error) {
 	s.hooks.Execute(executor.BeforeHook)
 	defer s.hooks.Execute(executor.AfterHook)
 	if f, ok := funcMap[s.ft]; ok {
