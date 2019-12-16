@@ -1,6 +1,7 @@
 package functions
 
 import (
+	"tools/pkg/functions/filter"
 	"tools/pkg/functions/fold"
 	"tools/pkg/functions/mapper"
 )
@@ -148,7 +149,13 @@ func (s *streamBuilder) appendMap(x Script) Stream {
 }
 
 func (s *streamBuilder) appendFilter(x Script) Stream {
-	return s.st.Filter(x.Instance())
+	opts := []filter.Option{}
+	for i := 0; i < x.NumOption(); i++ {
+		if p, ok := x.Option(i).(filter.Option); ok {
+			opts = append(opts, p)
+		}
+	}
+	return s.st.Filter(x.Instance(), opts...)
 }
 
 func (s *streamBuilder) appendFold(x Script) Stream {

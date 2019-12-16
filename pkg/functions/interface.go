@@ -34,7 +34,7 @@ type (
 		// Consume consume stream
 		//
 		// consumer :: a
-		Consume(consumer interface{}) error
+		Consume(consumer interface{}, options ...consume.Option) error
 		// As assign stream into reference v
 		As(v interface{}) error
 		// Sort sort stream
@@ -133,24 +133,16 @@ func (s *stream) Fold(aggregator interface{}, options ...fold.Option) Stream {
 	return NewStream(iterator.MustNewFromInterfaces(ret))
 }
 
-func (s *stream) Consume(consumer interface{}) error {
+func (s *stream) Consume(consumer interface{}, options ...consume.Option) error {
 	f, err := consume.NewConsumer(consumer)
 	if err != nil {
 		return newStreamError(errors.Consume, errMsgInvalidFunction, err)
 	}
-
-	for {
-		x, err := s.Next()
-		if err == iterator.EOI {
-			return nil
-		}
-		if err != nil {
-			return err
-		}
-		if err := f.Apply(x); err != nil {
-			return err
-		}
+	consumeExecutor, err := consume.NewExecutor(f, s, options...)
+	if err != nil {
+		return newStreamError(errors.Consume, errMsgCannotCreateExecutor, err)
 	}
+	return consumeExecutor.Consume()
 }
 
 func (s *stream) As(v interface{}) error {
