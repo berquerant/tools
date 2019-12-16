@@ -10,6 +10,7 @@ import (
 	"tools/pkg/errors"
 	"tools/pkg/functions/consume"
 	"tools/pkg/functions/filter"
+	"tools/pkg/functions/flat"
 	"tools/pkg/functions/fold"
 	"tools/pkg/functions/iterator"
 	"tools/pkg/functions/mapper"
@@ -41,7 +42,7 @@ type (
 		// less :: a -> a -> bool
 		Sort(less interface{}, options ...sorter.Option) Stream
 		// Flat flatten stream, single level
-		Flat() Stream
+		Flat(options ...flat.Option) Stream
 		// Lift lift up stream, single level, into []interface{}
 		Lift() Stream
 		// Err get error during streaming.
@@ -173,32 +174,12 @@ func (s *stream) Sort(less interface{}, options ...sorter.Option) Stream {
 	return NewStream(iterator.MustNew(slice))
 }
 
-func (s *stream) Flat() Stream {
-	var (
-		top   iterator.Iterator
-		iFunc func() (interface{}, error)
-	)
-	iFunc = func() (interface{}, error) {
-		if top == nil {
-			elem, err := s.Next()
-			if err != nil {
-				return nil, err
-			}
-			top = iterator.MustNew(elem)
-		}
-
-		x, err := top.Next()
-		if err == iterator.EOI {
-			top = nil
-			return iFunc()
-		}
-		if err != nil {
-			return nil, err
-		}
-		return x, nil
+func (s *stream) Flat(options ...flat.Option) Stream {
+	flatExecutor, err := flat.NewExecutor(s, options...)
+	if err != nil {
+		return NewNilStream(newStreamError(errors.Flat, errMsgCannotCreateExecutor, err))
 	}
-
-	return NewStream(iterator.MustNew(iterator.Func(iFunc)))
+	return NewStream(flatExecutor.Execute())
 }
 
 func getCommonType(v []interface{}) reflect.Type {

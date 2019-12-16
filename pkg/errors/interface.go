@@ -53,6 +53,8 @@ const (
 	Sort
 	// Lift is lift error
 	Lift
+	// Fla is flat error
+	Flat
 )
 
 func NewError() Error {

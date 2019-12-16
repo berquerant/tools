@@ -23,11 +23,12 @@ func _() {
 	_ = x[Consume-12]
 	_ = x[Sort-13]
 	_ = x[Lift-14]
+	_ = x[Flat-15]
 }
 
-const _Code_name = "UnknownNormalSystemParseTranslateIOValidateIteratorConversionFoldMapFilterConsumeSortLift"
+const _Code_name = "UnknownNormalSystemParseTranslateIOValidateIteratorConversionFoldMapFilterConsumeSortLiftFlat"
 
-var _Code_index = [...]uint8{0, 7, 13, 19, 24, 33, 35, 43, 51, 61, 65, 68, 74, 81, 85, 89}
+var _Code_index = [...]uint8{0, 7, 13, 19, 24, 33, 35, 43, 51, 61, 65, 68, 74, 81, 85, 89, 93}
 
 func (i Code) String() string {
 	if i < 0 || i >= Code(len(_Code_index)-1) {
