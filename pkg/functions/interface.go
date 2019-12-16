@@ -28,7 +28,7 @@ type (
 		// Filter select elements
 		//
 		// predicate :: a -> bool
-		Filter(predicate interface{}) Stream
+		Filter(predicate interface{}, options ...filter.Option) Stream
 		// Fold aggregate elements
 		Fold(aggregator interface{}, options ...fold.Option) Stream
 		// Consume consume stream
@@ -103,28 +103,16 @@ func (s *stream) Map(mapperFunc interface{}, options ...mapper.Option) Stream {
 	return NewStream(mapExecutor)
 }
 
-func (s *stream) Filter(predicateFunc interface{}) Stream {
+func (s *stream) Filter(predicateFunc interface{}, options ...filter.Option) Stream {
 	f, err := filter.NewPredicate(predicateFunc)
 	if err != nil {
 		return NewNilStream(newStreamError(errors.Filter, errMsgInvalidFunction, err))
 	}
-
-	var iFunc func() (interface{}, error)
-	iFunc = func() (interface{}, error) {
-		x, err := s.Next()
-		if err != nil {
-			return nil, err
-		}
-		ret, err := f.Apply(x)
-		if err != nil {
-			return nil, err
-		}
-		if !ret {
-			return iFunc()
-		}
-		return x, nil
+	filterExecutor, err := filter.NewExecutor(f, s, options...)
+	if err != nil {
+		return NewNilStream(newStreamError(errors.Filter, errMsgCannotCreateExecutor, err))
 	}
-	return NewStream(iterator.MustNew(iterator.Func(iFunc)))
+	return NewStream(filterExecutor)
 }
 
 func (s *stream) Fold(aggregator interface{}, options ...fold.Option) Stream {
