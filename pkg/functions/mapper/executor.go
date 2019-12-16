@@ -37,11 +37,11 @@ func NewExecutor(f Mapper, iter iterator.Iterator, options ...Option) (*Executor
 }
 
 func (s *Executor) Next() (interface{}, error) {
-	s.hooks.Execute(executor.RunningHook)
 	x, err := s.iter.Next()
 	if err != nil {
 		return nil, err
 	}
+	s.hooks.Execute(executor.RunningHook)
 	ret, err := s.f.Apply(x)
 	if err != nil {
 		return nil, err
