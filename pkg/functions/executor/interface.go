@@ -19,10 +19,10 @@ type (
 type HookType int
 
 const (
-	UnknownHookType HookType = iota
-	BeforeHookType
-	AfterHookType
-	RunningHookType
+	UnknownHook HookType = iota
+	BeforeHook
+	AfterHook
+	RunningHook
 )
 
 func NewHookable() Hookable {

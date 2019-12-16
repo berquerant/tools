@@ -8,15 +8,15 @@ func _() {
 	// An "invalid array index" compiler error signifies that the constant values have changed.
 	// Re-run the stringer command to generate them again.
 	var x [1]struct{}
-	_ = x[UnknownHookType-0]
-	_ = x[BeforeHookType-1]
-	_ = x[AfterHookType-2]
-	_ = x[RunningHookType-3]
+	_ = x[UnknownHook-0]
+	_ = x[BeforeHook-1]
+	_ = x[AfterHook-2]
+	_ = x[RunningHook-3]
 }
 
-const _HookType_name = "UnknownHookTypeBeforeHookTypeAfterHookTypeRunningHookType"
+const _HookType_name = "UnknownHookBeforeHookAfterHookRunningHook"
 
-var _HookType_index = [...]uint8{0, 15, 29, 42, 57}
+var _HookType_index = [...]uint8{0, 11, 21, 30, 41}
 
 func (i HookType) String() string {
 	if i < 0 || i >= HookType(len(_HookType_index)-1) {

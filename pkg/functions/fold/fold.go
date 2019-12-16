@@ -102,10 +102,10 @@ func NewExecutor(f Aggregator, iter iterator.Iterator, options ...Option) (*Exec
 }
 
 func (s *Executor) Fold() (interface{}, error) {
-	s.hooks.Execute(executor.BeforeHookType)
-	defer s.hooks.Execute(executor.AfterHookType)
+	s.hooks.Execute(executor.BeforeHook)
+	defer s.hooks.Execute(executor.AfterHook)
 	if f, ok := funcMap[s.ft]; ok {
-		s.hooks.Execute(executor.RunningHookType)
+		s.hooks.Execute(executor.RunningHook)
 		return f(s.agg, s.iv, s.iter)
 	}
 	return nil, InvalidType
