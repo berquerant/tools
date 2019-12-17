@@ -83,7 +83,7 @@ func WithHook(ht executor.HookType, h executor.Hook) Option {
 	}
 }
 
-// NewFoldExector creates Executor with default fold type R and initial zero value
+// NewExector creates Executor with default fold type R and initial zero value
 func NewExecutor(f Aggregator, iter iterator.Iterator, options ...Option) (*Executor, errors.Error) {
 	executor := &Executor{
 		hooks: executor.NewHookable(),

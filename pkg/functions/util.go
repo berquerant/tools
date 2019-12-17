@@ -1,9 +1,12 @@
 package functions
 
 import (
+	"bufio"
+	"io"
 	"tools/pkg/functions/filter"
 	"tools/pkg/functions/flat"
 	"tools/pkg/functions/fold"
+	"tools/pkg/functions/iterator"
 	"tools/pkg/functions/lift"
 	"tools/pkg/functions/mapper"
 	"tools/pkg/functions/sorter"
@@ -203,4 +206,41 @@ func (s *streamBuilder) appendLift(x Script) Stream {
 
 func (s *streamBuilder) Build() Stream {
 	return s.st
+}
+
+// NewLineSourceStream creates a stream yields line bytes from reader
+func NewLineSourceStream(r io.Reader) Stream {
+	s := bufio.NewScanner(r)
+	return NewStream(iterator.MustNew(iterator.Func(func() (interface{}, error) {
+		if s.Scan() {
+			return s.Bytes(), nil
+		}
+		if err := s.Err(); err != nil {
+			return nil, err
+		}
+		return nil, iterator.EOI
+	})))
+}
+
+// SinkLineToWriter consumes a stream.
+// write to writer at every element yielded from the stream.
+// invoke onError on writer error
+func SinkLineToWriter(w io.Writer, onError func(error), st Stream) error {
+	var (
+		s          = bufio.NewWriter(w)
+		useOnError = onError != nil
+		fErr       = func(err error) {
+			if useOnError && err != nil {
+				onError(err)
+			}
+		}
+		nl = []byte("\n")
+	)
+	return st.Consume(func(x []byte) {
+		if _, err := s.Write(append(x, nl...)); err != nil {
+			fErr(err)
+			return
+		}
+		fErr(s.Flush())
+	})
 }
