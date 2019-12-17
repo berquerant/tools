@@ -49,8 +49,6 @@ func New(v interface{}) (Iterator, errors.Error) {
 	switch v := v.(type) {
 	case Iterator:
 		return v, nil
-	case error:
-		return newErrorIterator(v)
 	case Func:
 		return newIteratorFromFunc(v)
 	}
@@ -85,17 +83,10 @@ func newSingleValueIterator(v interface{}) (Iterator, errors.Error) {
 	})
 }
 
-func newErrorIterator(err error) (Iterator, errors.Error) {
-	if err == nil {
-		return nil, invalidArgument
-	}
-	return newIteratorFromFunc(func() (interface{}, error) {
-		return nil, err
-	})
-}
-
 func newNilIterator() (Iterator, errors.Error) {
-	return newErrorIterator(EOI)
+	return newIteratorFromFunc(func() (interface{}, error) {
+		return nil, EOI
+	})
 }
 
 type (
