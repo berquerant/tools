@@ -7,12 +7,8 @@ import (
 	"strings"
 	"testing"
 	"tools/pkg/functions"
-	"tools/pkg/functions/consume"
-	"tools/pkg/functions/filter"
 	"tools/pkg/functions/fold"
 	"tools/pkg/functions/iterator"
-	"tools/pkg/functions/mapper"
-	"tools/pkg/functions/sorter"
 
 	"github.com/google/go-cmp/cmp"
 )
@@ -37,152 +33,24 @@ func people() []Person {
 }
 
 type (
-	funcType int
-
-	funcTuple struct {
-		T  funcType
-		F  interface{}
-		IV interface{}
-	}
-
-	funcTypeClassifier struct {
-		Tester func(interface{}) bool
-		T      funcType
-	}
-
 	streamTestcase struct {
-		Comment     string
-		Data        interface{}
-		Translators []*funcTuple
-		Result      []interface{}
+		Comment string
+		Data    interface{}
+		Stream  func(functions.Stream) functions.Stream
+		Result  []interface{}
 	}
 )
-
-const (
-	ftUnknown funcType = iota
-	ftMapper
-	ftPredicate
-	ftAggregator
-	ftConsumer
-	ftSorter
-	ftFlat // dummy
-	ftLift // dummy
-)
-
-var (
-	errNotSupportedFuncType = fmt.Errorf("not supported func type")
-	funcTypeClassifiers     = []*funcTypeClassifier{
-		&funcTypeClassifier{ // override mapper :: a -> bool
-			Tester: filter.IsPredicate,
-			T:      ftPredicate,
-		},
-		&funcTypeClassifier{
-			Tester: mapper.IsMapper,
-			T:      ftMapper,
-		},
-		&funcTypeClassifier{
-			Tester: fold.IsAggregator,
-			T:      ftAggregator,
-		},
-		&funcTypeClassifier{
-			Tester: consume.IsConsumer,
-			T:      ftConsumer,
-		},
-		&funcTypeClassifier{
-			Tester: sorter.IsSorter,
-			T:      ftSorter,
-		},
-	}
-)
-
-func classifyFunc(f interface{}) funcType {
-	for _, c := range funcTypeClassifiers {
-		if c.Tester(f) {
-			return c.T
-		}
-	}
-	return ftUnknown
-}
-
-func (s *funcTuple) apply(st functions.Stream) (ret functions.Stream, e error) {
-	defer func() {
-		if err := recover(); err != nil {
-			ret = nil
-			e = fmt.Errorf("funcTuple.apply(): %v", err)
-		}
-	}()
-	switch s.T {
-	case ftMapper:
-		return st.Map(s.F), nil
-	case ftPredicate:
-		return st.Filter(s.F), nil
-	case ftAggregator:
-		return st.Fold(s.F, fold.WithInitialValue(s.IV)), nil
-	case ftSorter:
-		return st.Sort(s.F), nil
-	case ftFlat:
-		return st.Flat(), nil
-	case ftLift:
-		return st.Lift(), nil
-	default:
-		return nil, errNotSupportedFuncType
-	}
-}
-
-type (
-	funcTuplesBuilder struct {
-		v []*funcTuple
-	}
-)
-
-func newFuncTuplesBuilder() *funcTuplesBuilder {
-	return &funcTuplesBuilder{
-		v: []*funcTuple{},
-	}
-}
-
-func (s *funcTuplesBuilder) Append(f interface{}) *funcTuplesBuilder {
-	s.v = append(s.v, &funcTuple{
-		T: classifyFunc(f),
-		F: f,
-	})
-	return s
-}
-
-func (s *funcTuplesBuilder) AppendWith(f, iv interface{}) *funcTuplesBuilder {
-	s.v = append(s.v, &funcTuple{
-		T:  classifyFunc(f),
-		F:  f,
-		IV: iv,
-	})
-	return s
-}
-
-func (s *funcTuplesBuilder) AppendType(ft funcType) *funcTuplesBuilder {
-	s.v = append(s.v, &funcTuple{
-		T: ft,
-	})
-	return s
-}
-
-func (s *funcTuplesBuilder) Build() []*funcTuple {
-	return s.v
-}
 
 func (s *streamTestcase) Test(t *testing.T) {
 	st := functions.NewStream(iterator.MustNew(s.Data))
-	for i, ft := range s.Translators {
-		ret, err := ft.apply(st)
-		if err != nil {
-			t.Errorf("%d th translator returns error: %v", i+1, err)
-			return
-		}
-		st = ret
-	}
+	st = s.Stream(st)
 	if err := st.Err(); err != nil {
 		t.Errorf("stream error: %v", err)
 	}
 	actual, err := iterator.ToSlice(st)
+	if err := st.Err(); err != nil {
+		t.Errorf("stream error: %v", err)
+	}
 	if err != nil {
 		t.Errorf("cannot get result: %v", err)
 		return
@@ -197,10 +65,11 @@ func TestStream(t *testing.T) {
 		&streamTestcase{
 			Comment: "mapper-1-simple",
 			Data:    people()[0:1],
-			Translators: newFuncTuplesBuilder().
-				Append(func(x Person) string {
+			Stream: func(s functions.Stream) functions.Stream {
+				return s.Map(func(x Person) string {
 					return strings.ToLower(x.Region)
-				}).Build(),
+				})
+			},
 			Result: func() []interface{} {
 				return []interface{}{
 					strings.ToLower(people()[0].Region),
@@ -210,10 +79,11 @@ func TestStream(t *testing.T) {
 		&streamTestcase{
 			Comment: "mapper-all-simple",
 			Data:    people(),
-			Translators: newFuncTuplesBuilder().
-				Append(func(x Person) string {
+			Stream: func(s functions.Stream) functions.Stream {
+				return s.Map(func(x Person) string {
 					return strings.ToLower(x.Region)
-				}).Build(),
+				})
+			},
 			Result: func() []interface{} {
 				r := make([]interface{}, len(people()))
 				for i, p := range people() {
@@ -225,8 +95,8 @@ func TestStream(t *testing.T) {
 		&streamTestcase{
 			Comment: "mapper-all-complex",
 			Data:    people(),
-			Translators: newFuncTuplesBuilder().
-				Append(func(x Person) struct {
+			Stream: func(s functions.Stream) functions.Stream {
+				return s.Map(func(x Person) struct {
 					S        string
 					Instance Person
 				} {
@@ -237,7 +107,8 @@ func TestStream(t *testing.T) {
 						S:        fmt.Sprintf("%s/%s/%s/%s", x.Name, x.Surname, x.Gender, x.Region),
 						Instance: x,
 					}
-				}).Build(),
+				})
+			},
 			Result: func() []interface{} {
 				r := make([]interface{}, len(people()))
 				for i, p := range people() {
@@ -255,30 +126,33 @@ func TestStream(t *testing.T) {
 		&streamTestcase{
 			Comment: "lift-no-content",
 			Data:    nil,
-			Translators: newFuncTuplesBuilder().
-				AppendType(ftLift).Build(),
+			Stream: func(s functions.Stream) functions.Stream {
+				return s.Lift()
+			},
 			Result: []interface{}{},
 		},
 		&streamTestcase{
 			Comment: "lift-1",
 			Data:    []int{1},
-			Translators: newFuncTuplesBuilder().
-				AppendType(ftLift).Build(),
+			Stream: func(s functions.Stream) functions.Stream {
+				return s.Lift()
+			},
 			Result: []interface{}{[]int{1}},
 		},
 		&streamTestcase{
 			Comment: "lift-people",
 			Data:    people(),
-			Translators: newFuncTuplesBuilder().
-				AppendType(ftLift).Build(),
+			Stream: func(s functions.Stream) functions.Stream {
+				return s.Lift()
+			},
 			Result: []interface{}{people()},
 		},
 		&streamTestcase{
 			Comment: "lift-flat-people",
 			Data:    people(),
-			Translators: newFuncTuplesBuilder().
-				AppendType(ftLift).
-				AppendType(ftFlat).Build(),
+			Stream: func(s functions.Stream) functions.Stream {
+				return s.Lift().Flat()
+			},
 			Result: func() []interface{} {
 				ps := people()
 				r := make([]interface{}, len(ps))
@@ -292,8 +166,9 @@ func TestStream(t *testing.T) {
 		&streamTestcase{
 			Comment: "flat-no-content",
 			Data:    nil,
-			Translators: newFuncTuplesBuilder().
-				AppendType(ftFlat).Build(),
+			Stream: func(s functions.Stream) functions.Stream {
+				return s.Flat()
+			},
 			Result: []interface{}{},
 		},
 		&streamTestcase{
@@ -301,8 +176,9 @@ func TestStream(t *testing.T) {
 			Data: [][]int{
 				[]int{1},
 			},
-			Translators: newFuncTuplesBuilder().
-				AppendType(ftFlat).Build(),
+			Stream: func(s functions.Stream) functions.Stream {
+				return s.Flat()
+			},
 			Result: []interface{}{1},
 		},
 		&streamTestcase{
@@ -311,8 +187,9 @@ func TestStream(t *testing.T) {
 				[]string{"f", "l", "a", "t"},
 				[]string{"str", "ring", "s"},
 			},
-			Translators: newFuncTuplesBuilder().
-				AppendType(ftFlat).Build(),
+			Stream: func(s functions.Stream) functions.Stream {
+				return s.Flat()
+			},
 			Result: []interface{}{"f", "l", "a", "t", "str", "ring", "s"},
 		},
 		&streamTestcase{
@@ -326,8 +203,9 @@ func TestStream(t *testing.T) {
 					[]int{123},
 				},
 			},
-			Translators: newFuncTuplesBuilder().
-				AppendType(ftFlat).Build(),
+			Stream: func(s functions.Stream) functions.Stream {
+				return s.Flat()
+			},
 			Result: []interface{}{[]int{1}, []int{2, 3}, []int{123}},
 		},
 		&streamTestcase{
@@ -336,9 +214,9 @@ func TestStream(t *testing.T) {
 				[]string{"fl", "at"},
 				[]string{"l", "ift"},
 			},
-			Translators: newFuncTuplesBuilder().
-				AppendType(ftFlat).
-				AppendType(ftLift).Build(),
+			Stream: func(s functions.Stream) functions.Stream {
+				return s.Flat().Lift()
+			},
 			Result: []interface{}{[]string{
 				"fl", "at", "l", "ift",
 			}},
@@ -346,28 +224,31 @@ func TestStream(t *testing.T) {
 		&streamTestcase{
 			Comment: "sort-no-content",
 			Data:    nil,
-			Translators: newFuncTuplesBuilder().
-				Append(func(x, y int) bool {
+			Stream: func(s functions.Stream) functions.Stream {
+				return s.Sort(func(x, y int) bool {
 					return x < y
-				}).Build(),
+				})
+			},
 			Result: []interface{}{},
 		},
 		&streamTestcase{
 			Comment: "sort-int",
 			Data:    []int{5, 4, 9, 2},
-			Translators: newFuncTuplesBuilder().
-				Append(func(x, y int) bool {
+			Stream: func(s functions.Stream) functions.Stream {
+				return s.Sort(func(x, y int) bool {
 					return x < y
-				}).Build(),
+				})
+			},
 			Result: []interface{}{2, 4, 5, 9},
 		},
 		&streamTestcase{
 			Comment: "sort-people",
 			Data:    people(),
-			Translators: newFuncTuplesBuilder().
-				Append(func(x, y Person) bool {
+			Stream: func(s functions.Stream) functions.Stream {
+				return s.Sort(func(x, y Person) bool {
 					return fmt.Sprintf("%s-%s", x.Name, x.Surname) < fmt.Sprintf("%s-%s", y.Name, y.Surname)
-				}).Build(),
+				})
+			},
 			Result: func() []interface{} {
 				ps := people()
 				sort.SliceStable(ps, func(i, j int) bool {
@@ -383,19 +264,21 @@ func TestStream(t *testing.T) {
 		&streamTestcase{
 			Comment: "filter-no-result",
 			Data:    people(),
-			Translators: newFuncTuplesBuilder().
-				Append(func(Person) bool {
+			Stream: func(s functions.Stream) functions.Stream {
+				return s.Filter(func(Person) bool {
 					return false
-				}).Build(),
+				})
+			},
 			Result: []interface{}{},
 		},
 		&streamTestcase{
 			Comment: "filter-no-filter",
 			Data:    people(),
-			Translators: newFuncTuplesBuilder().
-				Append(func(Person) bool {
+			Stream: func(s functions.Stream) functions.Stream {
+				return s.Filter(func(Person) bool {
 					return true
-				}).Build(),
+				})
+			},
 			Result: func() []interface{} {
 				r := make([]interface{}, len(people()))
 				for i, p := range people() {
@@ -407,10 +290,11 @@ func TestStream(t *testing.T) {
 		&streamTestcase{
 			Comment: "filter-filtered-result",
 			Data:    people(),
-			Translators: newFuncTuplesBuilder().
-				Append(func(x Person) bool {
+			Stream: func(s functions.Stream) functions.Stream {
+				return s.Filter(func(x Person) bool {
 					return x.Gender == "male"
-				}).Build(),
+				})
+			},
 			Result: func() []interface{} {
 				r := []interface{}{}
 				for _, p := range people() {
@@ -424,22 +308,24 @@ func TestStream(t *testing.T) {
 		&streamTestcase{
 			Comment: "aggregate-simple",
 			Data:    people(),
-			Translators: newFuncTuplesBuilder().
-				AppendWith(func(_ Person, acc int) int {
+			Stream: func(s functions.Stream) functions.Stream {
+				return s.Fold(func(_ Person, acc int) int {
 					return 1 + acc
-				}, 0).Build(),
+				})
+			},
 			Result: []interface{}{len(people())},
 		},
 		&streamTestcase{
 			Comment: "aggregate-complex",
 			Data:    people(),
-			Translators: newFuncTuplesBuilder().
-				AppendWith(func(p Person, acc []int) []int {
+			Stream: func(s functions.Stream) functions.Stream {
+				return s.Fold(func(p Person, acc []int) []int {
 					if p.Gender == "male" {
 						return acc
 					}
 					return append([]int{len(p.Name) + len(p.Surname)}, acc...)
-				}, []int{}).Build(),
+				}, fold.WithInitialValue([]int{}))
+			},
 			Result: func() []interface{} {
 				r := []int{}
 				for _, p := range people() {
@@ -454,24 +340,25 @@ func TestStream(t *testing.T) {
 		&streamTestcase{
 			Comment: "mix",
 			Data:    people(),
-			Translators: newFuncTuplesBuilder().
-				Append(func(p Person) bool {
+			Stream: func(s functions.Stream) functions.Stream {
+				return s.Filter(func(p Person) bool {
 					return p.Gender == "female"
-				}).Append(func(p Person) string {
-				return p.Region
-			}).AppendWith(func(x string, acc map[string]int) map[string]int {
-				acc[x]++
-				return acc
-			}, map[string]int{}).Append(func(x map[string]int) []string {
-				ret := []string{}
-				_ = functions.NewStream(iterator.MustNew(x)).Map(func(x iterator.KV) string {
-					return fmt.Sprintf("%v/%v", x.K(), x.V())
-				}).Consume(func(x string) {
-					ret = append(ret, x)
+				}).Map(func(p Person) string {
+					return p.Region
+				}).Fold(func(x string, acc map[string]int) map[string]int {
+					acc[x]++
+					return acc
+				}, fold.WithInitialValue(map[string]int{})).Map(func(x map[string]int) []string {
+					ret := []string{}
+					_ = functions.NewStream(iterator.MustNew(x)).Map(func(x iterator.KV) string {
+						return fmt.Sprintf("%v/%v", x.K(), x.V())
+					}).Consume(func(x string) {
+						ret = append(ret, x)
+					})
+					sort.Strings(ret)
+					return ret
 				})
-				sort.Strings(ret)
-				return ret
-			}).Build(),
+			},
 			Result: func() []interface{} {
 				regionCount := map[string]int{}
 				for _, p := range people() {
@@ -497,24 +384,22 @@ func TestStream(t *testing.T) {
 		&streamTestcase{
 			Comment: "mix2",
 			Data:    people(),
-			Translators: newFuncTuplesBuilder().
-				Append(func(p Person) string {
+			Stream: func(s functions.Stream) functions.Stream {
+				return s.Map(func(p Person) string {
 					return strings.ToUpper(p.Region)
-				}).AppendWith(func(x string, d map[string]int) map[string]int {
-				d[x]++
-				return d
-			}, map[string]int{},
-			).AppendType(
-				ftFlat,
-			).Append(func(x iterator.KV) bool {
-				return x.V().(int) > 1
-			}).Append(func(x, y iterator.KV) bool {
-				return x.K().(string) < y.K().(string)
-			}).Append(func(x, y iterator.KV) bool {
-				return x.V().(int) < y.V().(int)
-			}).Append(func(x iterator.KV) string {
-				return fmt.Sprintf("%v:%v", x.K(), x.V())
-			}).Build(),
+				}).Fold(func(x string, d map[string]int) map[string]int {
+					d[x]++
+					return d
+				}, fold.WithInitialValue(map[string]int{})).Flat().Filter(func(x iterator.KV) bool {
+					return x.V().(int) > 1
+				}).Sort(func(x, y iterator.KV) bool {
+					return x.K().(string) < y.K().(string)
+				}).Sort(func(x, y iterator.KV) bool {
+					return x.V().(int) < y.V().(int)
+				}).Map(func(x iterator.KV) string {
+					return fmt.Sprintf("%v:%v", x.K(), x.V())
+				})
+			},
 			Result: func() []interface{} {
 				d := map[string]int{}
 				for _, p := range people() {
