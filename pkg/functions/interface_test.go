@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 	"tools/pkg/functions"
+	"tools/pkg/functions/flat"
 	"tools/pkg/functions/fold"
 	"tools/pkg/functions/iterator"
 
@@ -220,6 +221,48 @@ func TestStream(t *testing.T) {
 			Result: []interface{}{[]string{
 				"fl", "at", "l", "ift",
 			}},
+		},
+		&streamTestcase{
+			Comment: "flat-perfect",
+			Data: [][][]int{
+				[][]int{
+					[]int{
+						1, 2,
+					},
+				},
+				[][]int{
+					[]int{3},
+					[]int{4, 5, 6},
+				},
+			},
+			Stream: func(s functions.Stream) functions.Stream {
+				return s.Flat(flat.WithType(flat.TypePerfect))
+			},
+			Result: []interface{}{
+				1, 2, 3, 4, 5, 6,
+			},
+		},
+		&streamTestcase{
+			Comment: "flat-perfect-interface",
+			Data: []interface{}{
+				1,
+				[]int{2, 3},
+				[][]int{
+					[]int{4},
+					[]int{5},
+				},
+				[][][]int{
+					[][]int{
+						[]int{6},
+					},
+				},
+			},
+			Stream: func(s functions.Stream) functions.Stream {
+				return s.Flat(flat.WithType(flat.TypePerfect))
+			},
+			Result: []interface{}{
+				1, 2, 3, 4, 5, 6,
+			},
 		},
 		&streamTestcase{
 			Comment: "sort-no-content",

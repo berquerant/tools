@@ -42,6 +42,40 @@ func MustNewFromInterfaces(vs ...interface{}) Iterator {
 	return iter
 }
 
+// Join merges 2 iterators
+func Join(x, y Iterator) Iterator {
+	var useSecond bool
+	r, _ := newIteratorFromFunc(func() (interface{}, error) {
+		if useSecond {
+			return y.Next()
+		}
+		elem, err := x.Next()
+		if err == EOI {
+			useSecond = true
+			return y.Next()
+		}
+		return elem, err
+	})
+	return r
+}
+
+// CanBeSingleValueIterator returns true if New(v) yields just an item
+func CanBeSingleValueIterator(v interface{}) bool {
+	if v == nil {
+		return false
+	}
+	switch v.(type) {
+	case Iterator, Func:
+		return false
+	}
+	switch reflect.TypeOf(v).Kind() {
+	case reflect.Array, reflect.Slice, reflect.Chan, reflect.Map:
+		return false
+	default:
+		return true
+	}
+}
+
 func New(v interface{}) (Iterator, errors.Error) {
 	if v == nil {
 		return newNilIterator()
