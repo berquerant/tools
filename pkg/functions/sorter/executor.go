@@ -19,7 +19,7 @@ type (
 )
 
 // WithHook add hook
-func WithHook(ht executor.HookType, h executor.Hook) Option {
+func WithHook(ht executor.HookType, h interface{}) Option {
 	return func(s *Executor) {
 		s.hooks.AddHook(ht, h)
 	}
@@ -38,23 +38,26 @@ func NewExecutor(f Sorter, iter iterator.Iterator, options ...Option) (*Executor
 }
 
 func (s *Executor) Execute() (iterator.Iterator, error) {
-	s.hooks.Execute(executor.BeforeHook)
-	defer s.hooks.Execute(executor.AfterHook)
+	s.hooks.Execute(executor.BeforeHook, s.iter)
 	slice, err := iterator.ToSlice(s.iter)
 	if err != nil {
 		return nil, err
 	}
 	var sError error
 	sort.SliceStable(slice, func(i, j int) bool {
-		s.hooks.Execute(executor.RunningHook)
+		s.hooks.Execute(executor.RunningHook, slice[i], slice[j])
 		ret, err := s.f.Apply(slice[i], slice[j])
 		if err != nil && sError == nil {
 			sError = err
+		}
+		if err == nil {
+			s.hooks.Execute(executor.RunningResultHook, ret)
 		}
 		return ret
 	})
 	if sError != nil {
 		return nil, sError
 	}
+	defer s.hooks.Execute(executor.AfterHook)
 	return iterator.MustNew(slice), nil
 }

@@ -18,7 +18,7 @@ type (
 )
 
 // WithHook add hook
-func WithHook(ht executor.HookType, h executor.Hook) Option {
+func WithHook(ht executor.HookType, h interface{}) Option {
 	return func(s *Executor) {
 		s.hooks.AddHook(ht, h)
 	}
@@ -37,26 +37,24 @@ func NewExecutor(f Predicate, iter iterator.Iterator, options ...Option) (*Execu
 }
 
 func (s *Executor) Execute() iterator.Iterator {
+	s.hooks.Execute(executor.BeforeHook, s.iter)
 	var (
-		iFunc    func() (interface{}, error)
-		isBefore = true
+		iFunc func() (interface{}, error)
 	)
 	iFunc = func() (interface{}, error) {
-		if isBefore {
-			isBefore = false
-			s.hooks.Execute(executor.BeforeHook)
-		}
 		x, err := s.iter.Next()
 		if err != nil {
-			s.hooks.Execute(executor.AfterHook)
+			if err == iterator.EOI {
+				s.hooks.Execute(executor.AfterHook)
+			}
 			return nil, err
 		}
-		s.hooks.Execute(executor.RunningHook)
+		s.hooks.Execute(executor.RunningHook, x)
 		ret, err := s.f.Apply(x)
 		if err != nil {
-			s.hooks.Execute(executor.AfterHook)
 			return nil, err
 		}
+		s.hooks.Execute(executor.RunningResultHook, ret)
 		if !ret {
 			return iFunc()
 		}

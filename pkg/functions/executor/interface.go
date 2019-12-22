@@ -1,17 +1,22 @@
 package executor
 
-type (
-	Hook func()
+import (
+	"reflect"
+	"tools/pkg/conv/reflection"
+)
 
+type (
 	Hookable interface {
-		AddHook(HookType, Hook) Hookable
-		GetHook(HookType) []Hook
-		// Execute executes hooks of the hook type
-		Execute(HookType)
+		// AddHook accepts any function
+		AddHook(ht HookType, hook interface{}) Hookable
+		GetHook(ht HookType) []interface{}
+		// Execute executes hooks of the hook type.
+		// executes functions that have appropriate size and types of arguments
+		Execute(ht HookType, args ...interface{})
 	}
 
 	hookable struct {
-		hooks map[HookType][]Hook
+		hooks map[HookType][]interface{}
 	}
 )
 
@@ -23,29 +28,49 @@ const (
 	BeforeHook
 	AfterHook
 	RunningHook
+	RunningResultHook
 )
 
 func NewHookable() Hookable {
 	return &hookable{
-		hooks: map[HookType][]Hook{},
+		hooks: map[HookType][]interface{}{},
 	}
 }
 
-func (s *hookable) AddHook(ht HookType, h Hook) Hookable {
+func (s *hookable) AddHook(ht HookType, h interface{}) Hookable {
+	if reflect.TypeOf(h).Kind() != reflect.Func {
+		return s
+	}
 	d, ok := s.hooks[ht]
 	if !ok {
-		d = []Hook{}
+		d = []interface{}{}
 	}
 	s.hooks[ht] = append(d, h)
 	return s
 }
 
-func (s *hookable) GetHook(ht HookType) []Hook {
+func (s *hookable) GetHook(ht HookType) []interface{} {
 	return s.hooks[ht]
 }
 
-func (s *hookable) Execute(ht HookType) {
+func (s *hookable) Execute(ht HookType, args ...interface{}) {
 	for _, h := range s.GetHook(ht) {
-		h()
+		s.execute(h, args...)
 	}
+}
+
+func (s *hookable) execute(h interface{}, args ...interface{}) {
+	t := reflect.TypeOf(h)
+	if t.NumIn() != len(args) {
+		return
+	}
+	vargs := make([]reflect.Value, len(args))
+	for i, a := range args {
+		v, err := reflection.ConvertShallow(a, t.In(i))
+		if err != nil {
+			return
+		}
+		vargs[i] = v
+	}
+	reflect.ValueOf(h).Call(vargs)
 }

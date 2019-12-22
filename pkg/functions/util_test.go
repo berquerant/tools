@@ -5,7 +5,6 @@ import (
 	"strings"
 	"testing"
 	"tools/pkg/functions"
-	"tools/pkg/functions/executor"
 	"tools/pkg/functions/fold"
 	"tools/pkg/functions/iterator"
 
@@ -123,12 +122,6 @@ func TestStreamBuilder(t *testing.T) {
 						fold.WithInitialValue(map[string]int{
 							"ENGLAND":  10,
 							"SLOVAKIA": 2,
-						}),
-						fold.WithHook(executor.BeforeHook, func() {
-							t.Log("before fold")
-						}),
-						fold.WithHook(executor.AfterHook, func() {
-							t.Log("after fold")
 						}),
 					},
 				},

@@ -7,9 +7,11 @@ import (
 	"strings"
 	"testing"
 	"tools/pkg/functions"
+	"tools/pkg/functions/executor"
 	"tools/pkg/functions/flat"
 	"tools/pkg/functions/fold"
 	"tools/pkg/functions/iterator"
+	"tools/pkg/functions/mapper"
 
 	"github.com/google/go-cmp/cmp"
 )
@@ -617,4 +619,65 @@ func TestStreamAs(t *testing.T) {
 	for _, tt := range testcases {
 		t.Run(tt.Comment, tt.Test)
 	}
+}
+
+func TestStreamComplex(t *testing.T) {
+	t.Run("map-hook", func(t *testing.T) {
+		var (
+			data = []int{
+				1, 2, 3,
+			}
+			response = []int{
+				101, 102, 103,
+			}
+			runningC       = make(chan int, len(data))
+			runningResultC = make(chan int, len(data))
+			resultC        = make(chan int, len(data))
+
+			origin = functions.NewStream(iterator.MustNew(data)).Map(func(x int) int {
+				return x + 100
+			}, mapper.WithHook(executor.RunningHook, func(x int) {
+				runningC <- x
+			}), mapper.WithHook(executor.RunningResultHook, func(x int) {
+				runningResultC <- x
+			}))
+
+			running       = functions.NewStream(iterator.MustNew(runningC))
+			runningResult = functions.NewStream(iterator.MustNew(runningResultC))
+			result        = functions.NewStream(iterator.MustNew(resultC))
+		)
+		if err := origin.Consume(func(x int) {
+			resultC <- x
+		}); err != nil {
+			t.Error(err)
+		}
+		close(resultC)
+		close(runningC)
+		close(runningResultC)
+
+		var (
+			rSlice       = []int{}
+			rResultSlice = []int{}
+			resultSlice  = []int{}
+		)
+		if err := running.As(&rSlice); err != nil {
+			t.Error(err)
+		}
+		if err := runningResult.As(&rResultSlice); err != nil {
+			t.Error(err)
+		}
+		if err := result.As(&resultSlice); err != nil {
+			t.Error(err)
+		}
+
+		if !cmp.Equal(rSlice, data) {
+			t.Errorf("  actual: %v\nexpected: %v", rSlice, data)
+		}
+		if !cmp.Equal(resultSlice, response) {
+			t.Errorf("  actual: %v\nexpected: %v", resultSlice, response)
+		}
+		if !cmp.Equal(rResultSlice, resultSlice) {
+			t.Errorf("runningResult: %v\n       result: %v", rResultSlice, resultSlice)
+		}
+	})
 }

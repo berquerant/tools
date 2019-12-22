@@ -18,7 +18,7 @@ type (
 )
 
 // WithHook add hook
-func WithHook(ht executor.HookType, h executor.Hook) Option {
+func WithHook(ht executor.HookType, h interface{}) Option {
 	return func(s *Executor) {
 		s.hooks.AddHook(ht, h)
 	}
@@ -37,19 +37,20 @@ func NewExecutor(f Consumer, iter iterator.Iterator, options ...Option) (*Execut
 }
 
 func (s *Executor) Execute() error {
-	s.hooks.Execute(executor.BeforeHook)
-	defer s.hooks.Execute(executor.AfterHook)
+	s.hooks.Execute(executor.BeforeHook, s.iter)
 	for {
 		x, err := s.iter.Next()
 		if err == iterator.EOI {
+			s.hooks.Execute(executor.AfterHook)
 			return nil
 		}
 		if err != nil {
 			return err
 		}
-		s.hooks.Execute(executor.RunningHook)
+		s.hooks.Execute(executor.RunningHook, x)
 		if err := s.f.Apply(x); err != nil {
 			return err
 		}
+		s.hooks.Execute(executor.RunningResultHook)
 	}
 }

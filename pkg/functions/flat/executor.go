@@ -37,7 +37,7 @@ func WithType(ft Type) Option {
 }
 
 // WithHook add hook
-func WithHook(ht executor.HookType, h executor.Hook) Option {
+func WithHook(ht executor.HookType, h interface{}) Option {
 	return func(s *Executor) {
 		s.hooks.AddHook(ht, h)
 	}
@@ -68,6 +68,7 @@ func (s *Executor) Execute() iterator.Iterator {
 // executePerfect flat an iterator recursively.
 // this yields elements that cannot be an iterator
 func (s *Executor) executePerfect() iterator.Iterator {
+	s.hooks.Execute(executor.BeforeHook, s.iter)
 	var (
 		stk   = stack.New()
 		iFunc func() (interface{}, error)
@@ -85,11 +86,10 @@ func (s *Executor) executePerfect() iterator.Iterator {
 			return iFunc()
 		}
 		if err != nil {
-			s.hooks.Execute(executor.AfterHook)
 			return nil, err
 		}
 		if iterator.CanBeSingleValueIterator(x) {
-			s.hooks.Execute(executor.RunningHook)
+			s.hooks.Execute(executor.RunningHook, x)
 			return x, nil
 		}
 		stk.Push(iterator.MustNew(x))
@@ -100,20 +100,18 @@ func (s *Executor) executePerfect() iterator.Iterator {
 
 // executeSimple flat an iterator 1 level
 func (s *Executor) executeSimple() iterator.Iterator {
+	s.hooks.Execute(executor.BeforeHook, s.iter)
 	var (
-		top      iterator.Iterator
-		iFunc    func() (interface{}, error)
-		isBefore = true
+		top   iterator.Iterator
+		iFunc func() (interface{}, error)
 	)
 	iFunc = func() (interface{}, error) {
 		if top == nil {
-			if isBefore {
-				isBefore = false
-				s.hooks.Execute(executor.BeforeHook)
-			}
 			elem, err := s.iter.Next()
 			if err != nil {
-				s.hooks.Execute(executor.AfterHook)
+				if err == iterator.EOI {
+					s.hooks.Execute(executor.AfterHook)
+				}
 				return nil, err
 			}
 			top = iterator.MustNew(elem)
@@ -125,10 +123,9 @@ func (s *Executor) executeSimple() iterator.Iterator {
 			return iFunc()
 		}
 		if err != nil {
-			s.hooks.Execute(executor.AfterHook)
 			return nil, err
 		}
-		s.hooks.Execute(executor.RunningHook)
+		s.hooks.Execute(executor.RunningHook, x)
 		return x, nil
 	}
 	return iterator.MustNew(iterator.Func(iFunc))

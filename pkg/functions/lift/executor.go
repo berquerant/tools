@@ -19,7 +19,7 @@ type (
 )
 
 // WithHook add hook
-func WithHook(ht executor.HookType, h executor.Hook) Option {
+func WithHook(ht executor.HookType, h interface{}) Option {
 	return func(s *Executor) {
 		s.hooks.AddHook(ht, h)
 	}
@@ -37,6 +37,7 @@ func NewExecutor(iter iterator.Iterator, options ...Option) (*Executor, errors.E
 }
 
 func (s *Executor) Execute() (iterator.Iterator, error) {
+	s.hooks.Execute(executor.BeforeHook, s.iter)
 	var err error
 	slice, err := iterator.ToSlice(s.iter)
 	if err != nil {
@@ -45,8 +46,7 @@ func (s *Executor) Execute() (iterator.Iterator, error) {
 
 	if len(slice) == 0 {
 		return iterator.MustNew(iterator.Func(func() (interface{}, error) {
-			s.hooks.Execute(executor.BeforeHook)
-			s.hooks.Execute(executor.AfterHook)
+			defer s.hooks.Execute(executor.AfterHook)
 			return nil, iterator.EOI
 		})), nil
 	}
@@ -60,11 +60,12 @@ func (s *Executor) Execute() (iterator.Iterator, error) {
 	return iterator.MustNew(iterator.Func(func() (interface{}, error) {
 		if isBefore {
 			isBefore = false
-			s.hooks.Execute(executor.BeforeHook)
-			s.hooks.Execute(executor.RunningHook)
-			return newSlice.Interface(), nil
+			s.hooks.Execute(executor.RunningHook, s.iter)
+			ret := newSlice.Interface()
+			s.hooks.Execute(executor.RunningResultHook, ret)
+			return ret, nil
 		}
-		s.hooks.Execute(executor.AfterHook)
+		defer s.hooks.Execute(executor.AfterHook)
 		return nil, iterator.EOI
 	})), nil
 }

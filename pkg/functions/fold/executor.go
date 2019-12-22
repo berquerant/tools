@@ -77,7 +77,7 @@ func WithInitialValue(v interface{}) Option {
 }
 
 // WithHook add hook
-func WithHook(ht executor.HookType, h executor.Hook) Option {
+func WithHook(ht executor.HookType, h interface{}) Option {
 	return func(s *Executor) {
 		s.hooks.AddHook(ht, h)
 	}
@@ -102,11 +102,15 @@ func NewExecutor(f Aggregator, iter iterator.Iterator, options ...Option) (*Exec
 }
 
 func (s *Executor) Execute() (interface{}, error) {
-	s.hooks.Execute(executor.BeforeHook)
-	defer s.hooks.Execute(executor.AfterHook)
 	if f, ok := funcMap[s.ft]; ok {
-		s.hooks.Execute(executor.RunningHook)
-		return f(s.agg, s.iv, s.iter)
+		s.hooks.Execute(executor.BeforeHook, s.iter)
+		s.hooks.Execute(executor.RunningHook, s.iv, s.iter)
+		ret, err := f(s.agg, s.iv, s.iter)
+		if err == nil {
+			s.hooks.Execute(executor.RunningResultHook, ret)
+			s.hooks.Execute(executor.AfterHook)
+		}
+		return ret, err
 	}
 	return nil, InvalidType
 }
