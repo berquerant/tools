@@ -96,6 +96,7 @@ func newSingleValueIterator(v interface{}) (Iterator, errors.Error) {
 		if isYielded {
 			return nil, EOI
 		}
+		isYielded = true
 		return v, nil
 	})
 }
