@@ -205,7 +205,6 @@ if __name__ == '__main__':
 
         if cmd == 'write':
             for xs in read_lines(BATCH_WRITE_SIZE):
-                print('DEBUG({})'.format(xs))
                 d.batch_write(items=[
                     json.loads(x) for x in xs
                 ])
