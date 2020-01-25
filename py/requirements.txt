@@ -4,3 +4,4 @@ mysql-connector-python
 boto3
 pika
 happybase
+aerospike
