@@ -1,9 +1,10 @@
 import json
 import boto3
 from common.json import Encoder
+import sys
 
 
-class S3:
+class Downloader:
     def __init__(self, region_name: str, endpoint_url=''):
         conf = {
             'region_name': region_name,
@@ -13,45 +14,61 @@ class S3:
         self.client = boto3.client('s3', **conf)
         self.resource = boto3.resource('s3', **conf)
 
-    def list_objects(self, bucket: str, prefix: str)-> dict:
-        return self.client.list_objects_v2(
-            Bucket=bucket,
-            Prefix=prefix,
-            Delimiter='/',
-        )
+    def _list_objects(self, bucket: str, prefix: str, ct='') -> dict:
+        params = {
+            'Bucket': bucket,
+            'Delimiter': '/',
+            'Prefix': prefix,
+        }
+        if ct:
+            params['ContinuationToken']: ct
+        return self.client.list_objects_v2(**params)
 
-    def _download(self, bucket: str, objects: dict, dry: bool):
-        if 'CommonPrefix' in objects:
-            for elem in objects['CommonPrefix']:
-                children = self.list_objects(
+    def list_objects(self, bucket: str, prefix: str) -> dict:
+        cps = set()
+        ct = ''
+        contents = []
+        while True:
+            r = self._list_objects(bucket=bucket, prefix=prefix, ct=ct)
+            if 'CommonPrefixes' in r:
+                cps |= set(x['Prefix'] for x in r['CommonPrefixes'])
+            contents.extend(r.get('Contents', []))
+            ct = r.get('NextContinuationToken', '')
+            if not ct:
+                break
+        return {
+            'Contents': contents,
+            'CommonPrefixes': list(cps),
+        }
+
+    def _dowload_objects(self, bucket: str, objects: dict = None, dry=False):
+        if objects is None:
+            objects = {}
+        if objects.get('CommonPrefixes'):
+            for elem in objects['CommonPrefixes']:
+                self._dowload_objects(
                     bucket=bucket,
-                    prefix=elem['Prefix'],
-                )
-                self._download(
-                    bucket=bucket,
-                    objects=children,
-                    dry=dry,
+                    objects=self.list_objects(bucket=bucket, prefix=elem),
                 )
             return
 
-        if 'Contents' not in objects:
+        if not objects.get('Contents'):
             print('no contents')
             return
 
         b = self.resource.Bucket(bucket)
         for elem in objects['Contents']:
-            print(json.dumps(elem, cls=Encoder))
             if dry:
+                print(json.dumps(elem, cls=Encoder))
                 continue
-            b.downlaod_file(Key=elem['Key'], Filename=elem['Key'].split('/')[-1])
+            sys.stdout.write('download {} ...'.format(json.dumps(elem, cls=Encoder)))
+            b.download_file(Key=elem['Key'], Filename=elem['Key'].split('/')[-1])
+            print('done')
 
-    def downlaod(self, bucket: str, prefix: str, dry: bool):
-        self._download(
+    def downaload_objects(self, bucket: str, prefix: str, dry=False):
+        self._dowload_objects(
             bucket=bucket,
-            objects=self.list_objects(
-                bucket=bucket,
-                prefix=prefix,
-            ),
+            objects=self.list_objects(bucket=bucket, prefix=prefix),
             dry=dry,
         )
 
@@ -71,11 +88,11 @@ if __name__ == '__main__':
 
     opt = p.parse_args()
 
-    s3 = S3(
+    d = Downloader(
         region_name=opt.region_name,
         endpoint_url=opt.endpoint_url,
     )
-    s3.downlaod(
+    d.downlaod_objects(
         bucket=opt.b,
         prefix=opt.p,
         dry=opt.dry,
