@@ -81,11 +81,12 @@ if __name__ == '__main__':
     p = ArgumentParser(
         description='HTTP(S) server that responds 200 OK',
     )
+    p.add_argument('--host', action='store', type=str, default='localhost', help='host')
     p.add_argument('-p', action='store', type=int, default=8080, help='port')
     p.add_argument('-c', action='store', type=str, help='certification')
     p.add_argument('-k', action='store', type=str, help='secret key')
     opt = p.parse_args()
 
-    s = Server(host='localhost', port=opt.p, handler=Handler)
+    s = Server(host=opt.host, port=opt.p, handler=Handler)
     ctx = Server.new_context(crt=opt.c, key=opt.k) if opt.c and opt.k else None
     s.run(ctx=ctx)
