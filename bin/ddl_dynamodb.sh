@@ -16,7 +16,7 @@ done
 cd seeds
 for s in $(find . -name "*.json")
 do
-    filename=$(basename "$t")
+    filename=$(basename "$s")
     table="${filename%.*}"
     echo "Process seed $filename"
     cat $filename | python $PROJECT/py/dynamodb.py --region_name $DYNAMODB_REGION --endpoint_url $DYNAMODB_ENDPOINT -t $table write
