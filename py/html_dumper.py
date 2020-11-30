@@ -4,27 +4,30 @@ import json
 
 
 class Dumper(HTMLParser):
+    def dump(self, xs: list):
+        print("\t".join(str(x) for x in xs), flush=True)
+
     def log(self, xs: list):
         r, c = self.getpos()
-        print("{}\t{}\t{}".format(r, c, "\t".join(xs)), flush=True)
+        self.dump([r, c, *xs])
 
-    def __visualize_nl(self, x: str) -> str:
+    def translate_data(self, x: str):
         return "\\n".join(x.split())
 
-    def __attrs2str(self, attrs: list) -> str:
+    def translate_attrs(self, attrs: list):
         return json.dumps(attrs, separators=(",", ":"))
 
     def handle_starttag(self, tag: str, attrs: list):
-        self.log(["startag", tag, self.__attrs2str(attrs)])
+        self.log(["startag", tag, self.translate_attrs(attrs)])
 
     def handle_endtag(self, tag: str):
         self.log(["endtag", tag])
 
     def handle_startendtag(self, tag: str, attrs: list):
-        self.log(["startendtag", tag, self.__attrs2str(attrs)])
+        self.log(["startendtag", tag, self.translate_attrs(attrs)])
 
     def handle_data(self, data: str):
-        self.log(["data", self.__visualize_nl(data)])
+        self.log(["data", self.translate_data(data)])
 
     def handle_entityref(self, name: str):
         self.log(["entityref", chr(name2codepoint[name])])
@@ -34,7 +37,7 @@ class Dumper(HTMLParser):
         self.log(["charref", chr(i)])
 
     def handle_comment(self, data: str):
-        self.log(["comment", self.__visualize_nl(data)])
+        self.log(["comment", self.translate_data(data)])
 
     def handle_decl(self, decl: str):
         self.log(["decl", decl])
@@ -43,7 +46,7 @@ class Dumper(HTMLParser):
         self.log(["pi", data])
 
     def unknown_decl(self, data: str):
-        self.log(["unknown", self.__visualize_nl(data)])
+        self.log(["unknown", self.translate_data(data)])
 
 
 if __name__ == "__main__":
