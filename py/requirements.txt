@@ -6,3 +6,4 @@ pika
 happybase
 aerospike
 graphviz
+kafka-python
