@@ -27,7 +27,7 @@ class JSONTree(namedtuple("JSONTree", "src children dest")):
 
     def draw(self, g: Digraph, x, nid, edge_name="", parent_id=""):
         if not isinstance(x, dict):
-            g.node(str(nid), label=self.json_dumps(x))
+            g.node(str(nid), label=dumps_for_graphviz(x))
             if parent_id:
                 g.edge(str(parent_id), str(nid), label=edge_name)
             return
@@ -54,7 +54,7 @@ if __name__ == "__main__":
         formatter_class=RawDescriptionHelpFormatter,
         epilog="""
 example:
-echo '{"n":"N1","lh":{"n":"N2","lh":{"n":"N3"},"rh":{"n":"N4"}},"rh":{"n":"N5","lh":{"n":"N6"},"rh":{"n":"N7","t":"true"}}}' | python jsontree.py lh rh""",
+echo '{"n":"N1","lh":{"n":"N2","lh":{"n":"N3"},"rh":{"n":"N4"}},"rh":{"n":"N5","lh":{"n":"N6"},"rh":{"n":"N7","t":"true","rh":["M1","M2"]}}}' | python jsontree.py lh rh""",
     )
 
     p.add_argument("-o", action="store", default="tmp/jsontree.out", help="output filename")
