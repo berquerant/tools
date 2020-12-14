@@ -2,6 +2,7 @@ from graphviz import Digraph
 import json
 from collections import namedtuple
 from uuid import uuid4
+import os
 
 
 class JSONTree(namedtuple("JSONTree", "src children dest")):
@@ -18,6 +19,7 @@ class JSONTree(namedtuple("JSONTree", "src children dest")):
         self.draw(g=g, x=x, nid=self.new_nid())
         d, f = self.dest.split("/", 1)
         g.render(filename=f, directory=d)
+        return os.path.abspath("{}.pdf".format(self.dest))
 
     def new_nid(self) -> str:
         return str(uuid4())
@@ -44,11 +46,18 @@ class JSONTree(namedtuple("JSONTree", "src children dest")):
 
 
 if __name__ == "__main__":
-    from argparse import ArgumentParser
+    from argparse import (
+        ArgumentParser,
+        RawDescriptionHelpFormatter,
+    )
     import sys
 
     p = ArgumentParser(
         description="draw tree from json",
+        formatter_class=RawDescriptionHelpFormatter,
+        epilog="""
+example:
+echo '{"n":"N1","lh":{"n":"N2","lh":{"n":"N3"},"rh":{"n":"N4"}},"rh":{"n":"N5","lh":{"n":"N6"},"rh":{"n":"N7","t":"true"}}}' | python jsontree.py lh rh""",
     )
 
     p.add_argument("-o", action="store", default="tmp/jsontree.out", help="output filename")
@@ -56,4 +65,5 @@ if __name__ == "__main__":
 
     opt = p.parse_args()
     src = sys.stdin.read()
-    JSONTree(src=src, children=opt.children, dest=opt.o).get()
+    dest = JSONTree(src=src, children=opt.children, dest=opt.o).get()
+    print(dest)
