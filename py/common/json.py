@@ -29,3 +29,8 @@ class Encoder(JSONEncoder):
 
 def dumps_compact(obj) -> str:
     return dumps(obj, cls=Encoder, separators=(',', ':'))
+
+
+def dumps_for_graphviz(obj) -> str:
+    return dumps(obj, sort_keys=True, indent=" ").\
+        replace("\n", "\\l").replace("{", "\\{").replace("}", "\\}") + "\\l"
