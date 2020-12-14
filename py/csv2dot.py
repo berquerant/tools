@@ -36,8 +36,6 @@ class CSV2Dot(namedtuple("CSV2Dot", "src dest")):
         for r in rows:
             if r.parent not in node_ids:
                 new_node(r.parent)
-            if not r.children:
-                continue
             for c in r.children:
                 if c not in node_ids:
                     new_node(c)
