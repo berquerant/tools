@@ -34,7 +34,7 @@ class Row(namedtuple("Row", "d")):
         return [Destination(d=x) for x in self.d.get("to", [])]
 
 
-class JSON2CSV(namedtuple("JSON2CSV", "src dest")):
+class JSON2Dot(namedtuple("JSON2Dot", "src dest")):
     def read(self) -> iter:
         for line in self.src:
             yield Row(d=json.loads(line))
@@ -93,5 +93,5 @@ example:
     p.add_argument("-o", action="store", default="tmp/json2dot.out", help="output filename")
 
     opt = p.parse_args()
-    dest = JSON2CSV(src=sys.stdin, dest=opt.o).get()
+    dest = JSON2Dot(src=sys.stdin, dest=opt.o).get()
     print(dest)
