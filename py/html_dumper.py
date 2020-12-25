@@ -1,7 +1,11 @@
 from html.parser import HTMLParser
-from html.entities import name2codepoint
+from abc import (
+    ABC,
+    abstractmethod,
+)
 from enum import Enum
 import json
+from collections import OrderedDict
 
 
 class Tag(Enum):
@@ -17,59 +21,110 @@ class Tag(Enum):
     UNKNOWN = 100
 
 
-class Dumper(HTMLParser):
-    def dump(self, xs: list):
-        print("\t".join(str(x) for x in xs), flush=True)
+class HTMLDumper(HTMLParser, ABC):
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
 
-    def log(self, xs: list):
-        r, c = self.getpos()
-        self.dump([r, c, *xs])
+    @abstractmethod
+    def translate_data(self, x: str):
+        pass
 
+    @abstractmethod
+    def translate_attrs(self, attrs: list):
+        pass
+
+    @abstractmethod
+    def log(self, x: dict):
+        pass
+
+    def gen_log(self, kind: Tag) -> OrderedDict:
+        return OrderedDict(kind=str(kind))
+
+    def handle_starttag(self, tag: str, attrs: list):
+        d = self.gen_log(Tag.START_TAG)
+        d["tag"] = tag
+        d["attrs"] = self.translate_attrs(attrs)
+        self.log(d)
+
+    def handle_endtag(self, tag: str):
+        d = self.gen_log(Tag.END_TAG)
+        d["tag"] = tag
+        self.log(d)
+
+    def handle_startendtag(self, tag: str, attrs: list):
+        d = self.gen_log(Tag.STARTEND_TAG)
+        d["tag"] = tag
+        d["attrs"] = self.translate_attrs(attrs)
+        self.log(d)
+
+    def handle_data(self, data: str):
+        d = self.gen_log(Tag.DATA)
+        d["data"] = self.translate_data(data)
+        self.log(d)
+
+    def handle_comment(self, data: str):
+        d = self.gen_log(Tag.COMMENT)
+        d["data"] = self.translate_data(data)
+        self.log(d)
+
+    def handle_decl(self, decl: str):
+        d = self.gen_log(Tag.DECL)
+        d["data"] = self.translate_data(decl)
+        self.log(d)
+
+    def handle_pi(self, data: str):
+        d = self.gen_log(Tag.PI)
+        d["data"] = self.translate_data(data)
+        self.log(d)
+
+    def unknown_decl(self, data: str):
+        d = self.gen_log(Tag.UNKNOWN)
+        d["data"] = self.translate_data(data)
+        self.log(d)
+
+
+class HTMLJSONDumper(HTMLDumper):
+    def translate_data(self, x: str):
+        return "\\n".join(x.splitlines())
+
+    def translate_attrs(self, attrs: list):
+        return attrs
+
+    def log(self, x: dict):
+        print(json.dumps(x, separators=(",", ":")))
+
+
+class HTMLTSVDumper(HTMLDumper):
     def translate_data(self, x: str):
         return "\\n".join(x.splitlines())
 
     def translate_attrs(self, attrs: list):
         return json.dumps(attrs, separators=(",", ":"))
 
-    def handle_starttag(self, tag: str, attrs: list):
-        self.log([Tag.START_TAG, tag, self.translate_attrs(attrs)])
-
-    def handle_endtag(self, tag: str):
-        self.log([Tag.END_TAG, tag])
-
-    def handle_startendtag(self, tag: str, attrs: list):
-        self.log([Tag.STARTEND_TAG, tag, self.translate_attrs(attrs)])
-
-    def handle_data(self, data: str):
-        self.log([Tag.DATA, self.translate_data(data)])
-
-    def handle_entityref(self, name: str):
-        self.log([Tag.ENTITY_REF, chr(name2codepoint[name])])
-
-    def handle_charref(self, name: str):
-        i = int(name[1:], 16) if name.startswith("x") else int(name)
-        self.log([Tag.CHAR_REF, chr(i)])
-
-    def handle_comment(self, data: str):
-        self.log([Tag.COMMENT, self.translate_data(data)])
-
-    def handle_decl(self, decl: str):
-        self.log([Tag.DECL, decl])
-
-    def handle_pi(self, data: str):
-        self.log([Tag.PI, data])
-
-    def unknown_decl(self, data: str):
-        self.log([Tag.UNKNOWN, self.translate_data(data)])
+    def log(self, x: dict):
+        print("\t".join(str(v) for v in x.values()))
 
 
 if __name__ == "__main__":
     import sys
-    d = Dumper()
+    from argparse import ArgumentParser
+
+    p = ArgumentParser("html_dumper")
+    p.add_argument("-f", action="store", default="json", choices=["json", "tsv"], help="format")
+    args = p.parse_args()
+
+    def dumper(f: str) -> HTMLDumper:
+        if f == "json":
+            return HTMLJSONDumper()
+        if f == "tsv":
+            return HTMLTSVDumper()
+        raise Exception("unknown dumper: {}".format(f))
+
+    d = dumper(args.f)
     try:
         for l in sys.stdin:
             d.feed(l)
-        d.close()
-    except (BrokenPipeError, IOError):
+    except BrokenPipeError:
         pass
-    sys.stderr.close()
+    finally:
+        d.close()
