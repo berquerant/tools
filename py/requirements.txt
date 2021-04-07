@@ -7,3 +7,4 @@ happybase
 aerospike
 graphviz
 kafka-python
+requests
